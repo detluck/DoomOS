@@ -58,11 +58,24 @@ We follow K&R / Linux kernel style conventions:
 
 ---
 
-## 4. Verification Checklist
+## 4. Build Commands (`make`)
+
+The project uses GNU Make to automate compiling, linking, ISO generation, and testing:
+
+| Command | Description |
+| :--- | :--- |
+| **`make`** (or `make all`) | Compiles all assembly and C sources, links the 64-bit kernel (`build/kernel.bin`), and generates `build/kernel32.bin` for QEMU direct booting. |
+| **`make run`** | Builds the kernel and immediately launches it inside a QEMU virtual machine window. |
+| **`make iso`** | Packages GRUB and the 64-bit kernel into a bootable ISO image (`build/kernel.iso`) for flashing to USB drives (requires `xorriso`). |
+| **`make clean`** | Deletes the `build/` directory and all compiled binaries and object files. |
+
+---
+
+## 5. Verification Checklist
 
 Before opening a PR, ensure:
 
-1. [ ] Builds with zero warnings (`-Wall -Wextra -Werror`).
-2. [ ] Tested and runs in emulator (e.g., QEMU) without panics or triple faults.
+1. [ ] Builds cleanly with zero warnings (`make`).
+2. [ ] Tested and runs in emulator (`make run`) without panics or triple faults.
 3. [ ] No dead code, obsolete commented code, or leftover debugging prints.
-4. [ ] Commits are clean and atomic.
+4. [ ] Commits follow Conventional Commits format (`type(scope): ...`).
