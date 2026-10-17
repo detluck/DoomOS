@@ -1,0 +1,42 @@
+name: Build CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: Build & Test (${{ matrix.compiler }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm xorriso grub-pc-bin grub-common qemu-system-x86
+
+      - name: Build kernel
+        run: |
+          make clean
+          make CC=${{ matrix.compiler }}
+
+      - name: Headless QEMU boot test
+        run: |
+          # Runs QEMU for 2 seconds. Exit code 124 (timeout) means the kernel booted and stayed alive without crashing:
+          timeout 2s qemu-system-x86_64 -kernel build/kernel32.bin -display none || [ $? -eq 124 ]
+
+      - name: Build bootable ISO
+        run: make iso
+
+      - name: Upload bootable ISO artifact
+        if: matrix.compiler == 'gcc'
+        uses: actions/upload-artifact@v4
+        with:
+          name: x86-64-kernel-iso
+          path: build/kernel.iso
