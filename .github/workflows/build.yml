@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm xorriso grub-pc-bin grub-common qemu-system-x86
+          sudo apt-get install -y nasm xorriso mtools dosfstools grub-pc-bin grub-common qemu-system-x86
 
       - name: Build kernel
         run: |
@@ -28,8 +28,14 @@ jobs:
 
       - name: Headless QEMU boot test
         run: |
-          # Runs QEMU for 2 seconds. Exit code 124 (timeout) means the kernel booted and stayed alive without crashing:
-          timeout 2s qemu-system-x86_64 -kernel build/kernel32.bin -display none || [ $? -eq 124 ]
+          # Runs QEMU for 2 seconds. Exit code 124 (timeout) means the kernel stayed alive without crashing:
+          EXIT_CODE=0
+          timeout 2s qemu-system-x86_64 -kernel build/kernel32.bin -display none || EXIT_CODE=$?
+          if [ "$EXIT_CODE" -ne 124 ]; then
+            echo "QEMU failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+          echo "QEMU boot test passed successfully!"
 
       - name: Build bootable ISO
         run: make iso

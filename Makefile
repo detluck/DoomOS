@@ -3,7 +3,7 @@ LD = ld
 AS = nasm
 
 # Compiler flags for freestanding 64-bit kernel
-CFLAGS = -m64 -ffreestanding -fno-stack-protector -mno-red-zone -Wall -Wextra -nostdlib -O2
+CFLAGS = -m64 -ffreestanding -fno-stack-protector -mno-red-zone -Wall -Wextra -nostdlib -O2 -Ikernel/include
 ASFLAGS = -f elf64
 LDFLAGS = -n -T linker.ld --no-warn-rwx-segments
 

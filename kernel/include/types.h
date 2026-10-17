@@ -4,18 +4,26 @@
  * PURPOSE:
  * Core data type definitions used across the entire operating system.
  *
- * WHAT SHOULD GO HERE:
- * 1. Freestanding compiler headers:
- *    - <stdint.h> (for fixed-width integer types)
- *    - <stddef.h> (for size_t, ptrdiff_t, NULL)
- *    - <stdbool.h> (for bool, true, false)
- *
- * 2. Shorthand integer aliases (Linux kernel style):
- *    - Unsigned: u8, u16, u32, u64
- *    - Signed:   s8, s16, s32, s64 (or i8, i16, i32, i64)
- *
- * 3. Kernel domain-specific memory types:
- *    - phys_addr_t: 64-bit unsigned integer representing raw physical RAM addresses
- *    - virt_addr_t: 64-bit unsigned integer representing virtual memory addresses
- *    - pfn_t:       64-bit unsigned integer representing a Page Frame Number (phys_addr / PAGE_SIZE)
  */
+
+#pragma once
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+// aliases like on linux
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
+
+// Memory Types
+typedef u64 phys_addr_t;
+typedef u64 virt_addr_t;
+typedef u64 pfn_t;
