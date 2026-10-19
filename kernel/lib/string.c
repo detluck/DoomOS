@@ -85,10 +85,9 @@ size_t strnlen(const char *str, size_t maxlen) {
 }
 
 int strcmp(const char *s1, const char *s2) {
-  unsigned char st1, st2;
   while (1) {
-    st1 = *s1++;
-    st2 = *s2++;
+    unsigned char st1 = *s1++;
+    unsigned char st2 = *s2++;
 
     if (st1 != st2) {
       return st1 < st2 ? -1 : 1;
@@ -101,10 +100,9 @@ int strcmp(const char *s1, const char *s2) {
 }
 
 int strncmp(const char *s1, const char *s2, size_t n) {
-  unsigned char st1, st2;
   while (n--) {
-    st1 = *s1++;
-    st2 = *s2++;
+    unsigned char st1 = *s1++;
+    unsigned char st2 = *s2++;
 
     if (st1 != st2) {
       return st1 < st2 ? -1 : 1;
