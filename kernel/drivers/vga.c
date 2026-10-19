@@ -17,7 +17,6 @@ static inline uint16_t make_entry(char c, uint8_t color)
     __asm__ volatile("outb %0, %1" : : "a"(val), "Nd"(port));
 }*/
 
-
 /*static inline uint8_t inb(uint16_t port)
 {
     uint8_t ret;
@@ -74,7 +73,7 @@ void vga_get_cursor_pos(size_t *row, size_t *col)
 void vga_clear(void)
 {
     color = 0;
-    
+
     for (size_t y = 0; y < VGA_HEIGHT; y++) {
         for (size_t x = 0; x < VGA_WIDTH; x++) {
             buffer[y * VGA_WIDTH + x] = make_entry(' ', color);

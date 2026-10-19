@@ -6,15 +6,15 @@ static inline void outw(uint16_t port, uint16_t val)
     __asm__ volatile("outw %0, %1" : : "a"(val), "Nd"(port));
 }
 
-void kernel_main(void) {
+void kernel_main(void)
+{
     vga_init();
-    
 
-    vga_set_color(14,3);
+    vga_set_color(14, 3);
     vga_write("DoomOS 64-bit kernel initialized.\n");
     vga_write("VGA text driver online: 80x25, hardware cursor, scrolling.\n\n");
 
-    vga_set_color(1,2);
+    vga_set_color(1, 2);
 
     vga_write("\nShutting down soons...\n");
 
@@ -22,12 +22,11 @@ void kernel_main(void) {
     for (volatile uint64_t i = 0; i < 2000000000ULL; i++)
         ;
 
-    
     vga_clear();
 
-    vga_set_color(1,8);
+    vga_set_color(1, 8);
     vga_write("Powering off.\n");
-    vga_set_color(3,5);
+    vga_set_color(3, 5);
     vga_write("bye");
 
     for (volatile uint64_t i = 0; i < 2000000000ULL; i++)

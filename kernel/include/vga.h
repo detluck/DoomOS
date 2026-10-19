@@ -6,7 +6,7 @@
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
-#define VGA_MEMORY ((volatile uint16_t *)0xB8000)
+#define VGA_MEMORY ((volatile uint16_t *) 0xB8000)
 
 // https://en.wikipedia.org/wiki/VGA_text_mode
 enum vga_color {
