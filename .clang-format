@@ -1,8 +1,63 @@
+# Formatting rules for the x86-64 freestanding C kernel.
 BasedOnStyle: LLVM
-IndentWidth: 2
-TabWidth: 2
+
+Language: Cpp
+Standard: c++11
+
+# Indentation and line length
+IndentWidth: 4
+TabWidth: 4
 UseTab: Never
 ColumnLimit: 100
-AllowShortFunctionsOnASingleLine: Inline
+
+# Braces: functions on a new line; control-flow braces on the same line.
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: Never
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  AfterExternBlock: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+
+# Keep compact constructs readable and predictable.
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+BreakBeforeTernaryOperators: true
+SpaceBeforeParens: ControlStatements
+SpacesInParentheses: false
+
+# C pointer and declaration style.
 PointerAlignment: Right
-BreakBeforeBraces: Attach
+DerivePointerAlignment: false
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: DontAlign
+BinPackArguments: true
+BinPackParameters: true
+
+# Keep preprocessor directives flush-left and preserve include grouping.
+IndentPPDirectives: None
+SortIncludes: false
+IncludeBlocks: Preserve
+
+# Avoid formatting changes that can obscure macro-heavy low-level C.
+Cpp11BracedListStyle: true
+SpaceAfterCStyleCast: true
+SpaceAfterLogicalNot: false
