@@ -22,7 +22,9 @@ KERNEL_BIN = $(BUILD_DIR)/kernel.bin
 KERNEL_BIN32 = $(BUILD_DIR)/kernel32.bin
 KERNEL_ISO = $(BUILD_DIR)/kernel.iso
 
-.PHONY: all run iso clean
+HOST_CC ?= gcc
+
+.PHONY: all run iso clean test format format-check lint
 
 all: $(KERNEL_BIN) $(KERNEL_BIN32)
 
@@ -54,6 +56,30 @@ iso: $(KERNEL_BIN)
 # Run directly in QEMU
 run: $(KERNEL_BIN32)
 	qemu-system-x86_64 -kernel $(KERNEL_BIN32)
+
+# Host-side unit tests
+test:
+	@mkdir -p $(BUILD_DIR)
+	$(HOST_CC) -Wall -Wextra -fno-builtin -Ikernel/include tests/test_string.c kernel/lib/string.c -o $(BUILD_DIR)/test_string
+	./$(BUILD_DIR)/test_string
+
+# Code formatting (in-place)
+format:
+	find kernel tests -type f \( -name '*.c' -o -name '*.h' \) -exec clang-format -i {} +
+
+# Code formatting check (dry-run for CI)
+format-check:
+	find kernel tests -type f \( -name '*.c' -o -name '*.h' \) -exec clang-format --dry-run --Werror {} +
+
+# Static analysis
+lint:
+	cppcheck --enable=warning,style,performance,portability \
+	         --error-exitcode=1 \
+	         --inline-suppr \
+	         --suppress=missingIncludeSystem \
+	         --suppress=unusedFunction \
+	         -Ikernel/include \
+	         kernel/
 
 clean:
 	rm -rf $(BUILD_DIR)

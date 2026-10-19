@@ -44,4 +44,6 @@ static __always_inline void outl(u16 port, u32 value) {
 }
 
 // hardware Delay
-static __always_inline void io_wait(void) { outb(0x80, 0); }
+static __always_inline void io_wait(void) {
+  outb(0x80, 0);
+}

@@ -12,9 +12,9 @@
 
 void panic(const char *message) __noreturn;
 
-#define assert(condition)                                                      \
-  do {                                                                         \
-    if (!(condition)) {                                                        \
-      panic("Assertion failed: " #condition);                                  \
-    }                                                                          \
+#define assert(condition)                                                                          \
+  do {                                                                                             \
+    if (!(condition)) {                                                                            \
+      panic("Assertion failed: " #condition);                                                      \
+    }                                                                                              \
   } while (0)
