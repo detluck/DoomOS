@@ -12,7 +12,7 @@ ISO_DIR = $(BUILD_DIR)/isodir
 
 # Source files
 ASM_SRC = boot/header.asm boot/boot.asm
-C_SRC = kernel/kernel.c
+C_SRC = $(shell find kernel -type f -name '*.c')
 
 # Object files
 ASM_OBJ = $(patsubst boot/%.asm, $(BUILD_DIR)/%.o, $(ASM_SRC))
@@ -33,7 +33,7 @@ $(BUILD_DIR)/%.o: boot/%.asm
 
 # Compile C files
 $(BUILD_DIR)/%.o: kernel/%.c
-	@mkdir -p $(BUILD_DIR)
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Link 64-bit ELF kernel binary (for GRUB)

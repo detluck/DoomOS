@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <stdbool.h> // IWYU pragma: export
+#include <stddef.h>  // IWYU pragma: export
+#include <stdint.h>  // IWYU pragma: export
 
 // aliases like on linux
 typedef uint8_t u8;

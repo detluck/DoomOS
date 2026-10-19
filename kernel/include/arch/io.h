@@ -3,28 +3,45 @@
  *
  * PURPOSE:
  * Hardware port I/O wrappers for x86-64 architecture.
- *
- * WHAT SHOULD GO HERE:
- * 1. Byte-level port I/O:
- *    - static inline u8 inb(u16 port);
- *      Reads 1 byte from the specified hardware I/O port using inline assembly
- * ("inb %1, %0").
- *    - static inline void outb(u16 port, u8 val);
- *      Writes 1 byte to the specified hardware I/O port using inline assembly
- * ("outb %0, %1").
- *
- * 2. Word and double-word port I/O (optional / when needed):
- *    - inw / outw (16-bit)
- *    - inl / outl (32-bit)
- *
- * 3. Hardware delay helper:
- *    - static inline void io_wait(void);
- *      Writes to an unused I/O port (typically 0x80) to give slow legacy
- * hardware time to settle.
- *
- * USAGE:
- * - Used by PS/2 keyboard driver (ports 0x60, 0x64).
- * - Used by PIC 8259 interrupt controller remap (ports 0x20, 0x21, 0xA0, 0xA1).
- * - Used by PIT 8254 system timer (ports 0x40, 0x43).
- * - Used by serial port debugging (port 0x3F8).
  */
+
+#pragma once
+
+#include "defs.h"
+#include "types.h"
+
+// 8-Bit Port
+static __always_inline u8 inb(u16 port) {
+  u8 value;
+  __asm__ volatile("inb %w1, %0" : "=a"(value) : "Nd"(port));
+  return value;
+}
+
+static __always_inline void outb(u16 port, u8 value) {
+  __asm__ volatile("outb %b0, %w1" : : "a"(value), "Nd"(port));
+}
+
+// 16-Bit Port
+static __always_inline u16 inw(u16 port) {
+  u16 value;
+  __asm__ volatile("inw %w1, %0" : "=a"(value) : "Nd"(port));
+  return value;
+}
+
+static __always_inline void outw(u16 port, u16 value) {
+  __asm__ volatile("outw %w0, %w1" : : "a"(value), "Nd"(port));
+}
+
+// 32-Bit Port
+static __always_inline u32 inl(u16 port) {
+  u32 value;
+  __asm__ volatile("inl %w1, %0" : "=a"(value) : "Nd"(port));
+  return value;
+}
+
+static __always_inline void outl(u16 port, u32 value) {
+  __asm__ volatile("outl %0, %w1" : : "a"(value), "Nd"(port));
+}
+
+// hardware Delay
+static __always_inline void io_wait(void) { outb(0x80, 0); }
