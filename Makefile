@@ -24,7 +24,7 @@ KERNEL_ISO = $(BUILD_DIR)/kernel.iso
 
 HOST_CC ?= gcc
 
-.PHONY: all run iso clean test format format-check lint
+.PHONY: all run run-iso iso clean test format format-check lint
 
 all: $(KERNEL_BIN) $(KERNEL_BIN32)
 
@@ -53,9 +53,13 @@ iso: $(KERNEL_BIN)
 	cp boot/grub.cfg $(ISO_DIR)/boot/grub/grub.cfg
 	grub-mkrescue -o $(KERNEL_ISO) $(ISO_DIR)
 
-# Run directly in QEMU
+# Run directly in QEMU (Multiboot 1 direct kernel boot)
 run: $(KERNEL_BIN32)
 	qemu-system-x86_64 -kernel $(KERNEL_BIN32)
+
+# Run GRUB bootable ISO in QEMU (Multiboot 2 via GRUB)
+run-iso: iso
+	qemu-system-x86_64 -cdrom $(KERNEL_ISO)
 
 # Host-side unit tests
 test:
