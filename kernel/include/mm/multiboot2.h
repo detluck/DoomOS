@@ -88,6 +88,6 @@ struct multiboot_tag_mmap {
 
 bool multiboot_init(u64 magic, u64 info_adr);
 
-struct multiboot_tag_mmap *get_multiboot_mmap(void);
+const struct multiboot_tag_mmap *get_multiboot_mmap(void);
 
 void print_multiboot_mmap(void);

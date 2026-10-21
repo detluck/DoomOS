@@ -1,6 +1,7 @@
 #include "mm/multiboot2.h"
 #define LOG_SCOPE "MULTIBOOT"
 #include "lib/log.h"
+#include "vga.h"
 
 static const struct multiboot_tag_mmap *mmap_tag = NULL;
 
@@ -43,4 +44,49 @@ bool multiboot_init(u64 magic, u64 info_adr)
         ptr += (tag->size + 7) & ~7;
     }
     return mmap_tag != NULL;
+}
+
+const struct multiboot_tag_mmap *get_multiboot_mmap(void)
+{
+    return mmap_tag;
+}
+
+void print_multiboot_mmap(void)
+{
+    if (mmap_tag == NULL) {
+        pr_err("mmap_tag is NULL");
+        return;
+    }
+
+    pr_info("--- Multiboot2 Memory Map ---");
+    const u8 *base = (const u8 *) mmap_tag;
+    const u8 *end = (const u8 *) base + mmap_tag->size;
+    const u8 *ptr = (const u8 *) mmap_tag->entries;
+
+    while (ptr < end) {
+        const struct multiboot_mmap_entry *entry = (const struct multiboot_mmap_entry *) ptr;
+
+        vga_write("  [");
+        vga_write_hex(entry->addr);
+        vga_write(" - ");
+        vga_write_hex(entry->addr + entry->len);
+        vga_write("] ");
+
+        if (entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
+            vga_set_color(VGA_COLOR_LIGHT_GREEN, VGA_COLOR_BLACK);
+            vga_write("AVAILABLE\n");
+        } else if (entry->type == MULTIBOOT_MEMORY_RESERVED) {
+            vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+            vga_write("RESERVED\n");
+        } else if (entry->type == MULTIBOOT_MEMORY_ACPI_RECLAIMABLE) {
+            vga_set_color(VGA_COLOR_LIGHT_CYAN, VGA_COLOR_BLACK);
+            vga_write("ACPI RECLAIMABLE\n");
+        } else {
+            vga_set_color(VGA_COLOR_LIGHT_GRAY, VGA_COLOR_BLACK);
+            vga_write("OTHER\n");
+        }
+        vga_set_color(VGA_COLOR_LIGHT_GRAY, VGA_COLOR_BLACK);
+
+        ptr += mmap_tag->entry_size;
+    }
 }

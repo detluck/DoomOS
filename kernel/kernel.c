@@ -14,6 +14,7 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
     if (!multiboot_init(magic, mb2_info_adr)) {
         panic("Failed to initialize Multiboot2: cannot detect physical memory!");
     }
+    print_multiboot_mmap();
     vga_set_color(1, 2);
 
     vga_write("\nShutting down soons...\n");
