@@ -3,6 +3,7 @@ ENTRY(start)
 SECTIONS {
   /* Load kernel at 1 MiB physical address */
   . = 1M;
+  _kernel_start = .;
 
   /* Multiboot header */
   .boot : {
@@ -28,4 +29,6 @@ SECTIONS {
   .bss : {
       *(.bss)
   }
+  . = ALIGN(4096);
+  _kernel_end = .;
 }
