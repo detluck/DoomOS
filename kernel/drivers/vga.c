@@ -174,8 +174,29 @@ void vga_write_hex(uint64_t value)
     vga_write(&tmp[i + 1]);
 }
 
+void vga_set_blink(bool enabled)
+{
+    uint8_t value;
+
+    inb(0x3DA);
+    outb(0x3C0, 0x10);
+    value = inb(0x3C1);
+
+    if (enabled)
+        value |= (1 << 3);
+    else
+        value &= ~(1 << 3);
+
+    inb(0x3DA);
+    outb(0x3C0, 0x10);
+    outb(0x3C0, value);
+    outb(0x3C0, 0x20);
+}
+
 void vga_init(void)
 {
+    vga_set_blink(false);
+
     vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     vga_enable_cursor(0, 15); // full-height blinking cursor
     vga_clear();

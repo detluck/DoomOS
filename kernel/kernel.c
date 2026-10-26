@@ -10,11 +10,11 @@ void kernel_main(void)
 {
     vga_init();
 
-    vga_set_color(14, 3);
+    vga_set_color(VGA_COLOR_YELLOW, VGA_COLOR_CYAN);
     vga_write("DoomOS 64-bit kernel initialized.\n");
     vga_write("VGA text driver online: 80x25, hardware cursor, scrolling.\n\n");
 
-    vga_set_color(1, 2);
+    vga_set_color(VGA_COLOR_BLUE, VGA_COLOR_GREEN);
 
     vga_write("\nShutting down soons...\n");
 
@@ -24,9 +24,9 @@ void kernel_main(void)
 
     vga_clear();
 
-    vga_set_color(1, 8);
+    vga_set_color(VGA_COLOR_BLUE, VGA_COLOR_DARK_GRAY);
     vga_write("Powering off.\n");
-    vga_set_color(3, 5);
+    vga_set_color(VGA_COLOR_CYAN, VGA_COLOR_MAGENTA);
     vga_write("bye");
 
     for (volatile uint64_t i = 0; i < 2000000000ULL; i++)
