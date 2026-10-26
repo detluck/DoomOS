@@ -19,14 +19,13 @@ ASM_OBJ = $(patsubst boot/%.asm, $(BUILD_DIR)/%.o, $(ASM_SRC))
 C_OBJ = $(patsubst kernel/%.c, $(BUILD_DIR)/%.o, $(C_SRC))
 
 KERNEL_BIN = $(BUILD_DIR)/kernel.bin
-KERNEL_BIN32 = $(BUILD_DIR)/kernel32.bin
 KERNEL_ISO = $(BUILD_DIR)/kernel.iso
 
 HOST_CC ?= gcc
 
 .PHONY: all run run-iso iso clean test format format-check lint
 
-all: $(KERNEL_BIN) $(KERNEL_BIN32)
+all: $(KERNEL_BIN)
 
 # Assemble NASM files
 $(BUILD_DIR)/%.o: boot/%.asm
@@ -42,10 +41,6 @@ $(BUILD_DIR)/%.o: kernel/%.c
 $(KERNEL_BIN): $(ASM_OBJ) $(C_OBJ)
 	$(LD) $(LDFLAGS) -o $@ $^
 
-# 32-bit ELF wrapper (enables direct QEMU -kernel booting)
-$(KERNEL_BIN32): $(KERNEL_BIN)
-	objcopy -I elf64-x86-64 -O elf32-i386 $< $@
-
 # Create bootable ISO with GRUB
 iso: $(KERNEL_BIN)
 	@mkdir -p $(ISO_DIR)/boot/grub
@@ -53,13 +48,11 @@ iso: $(KERNEL_BIN)
 	cp boot/grub.cfg $(ISO_DIR)/boot/grub/grub.cfg
 	grub-mkrescue -o $(KERNEL_ISO) $(ISO_DIR)
 
-# Run directly in QEMU (Multiboot 1 direct kernel boot)
-run: $(KERNEL_BIN32)
-	qemu-system-x86_64 -kernel $(KERNEL_BIN32)
-
-# Run GRUB bootable ISO in QEMU (Multiboot 2 via GRUB)
-run-iso: iso
+# Run GRUB bootable ISO in QEMU (Multiboot 2)
+run: iso
 	qemu-system-x86_64 -cdrom $(KERNEL_ISO)
+
+run-iso: run
 
 # Host-side unit tests
 test:
