@@ -1,61 +1,62 @@
 #include "vga.h"
+#include "types.h"
 #include "arch/io.h"
 
 // https://github.com/torvalds/linux/blob/master/include/video/vga.h
 
 static size_t cursor_row = 0;
 static size_t cursor_col = 0;
-static uint8_t color = 0;
-static volatile uint16_t *buffer = VGA_MEMORY;
+static u8 color = 0;
+static volatile u16 *buffer = VGA_MEMORY;
 
-static inline uint16_t make_entry(char c, uint8_t color)
+static inline u16 make_entry(char c, u8 color)
 {
-    return (uint16_t) ((uint16_t) color << 8) | (uint8_t) c;
+    return (u16) ((u16) color << 8) | (u8) c;
 }
 
 // crtc registers on ports 0x3D4 / 0x3D5
-/*static inline void outb(uint16_t port, uint8_t val)
+/*static inline void outb(u16 port, u8 val)
 {
     __asm__ volatile("outb %0, %1" : : "a"(val), "Nd"(port));
 }*/
 
-/*static inline uint8_t inb(uint16_t port)
+/*static inline u8 inb(u16 port)
 {
-    uint8_t ret;
+    u8 ret;
     __asm__ volatile("inb %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }*/
 
 static void update_hardware_cursor(void)
 {
-    uint16_t pos = (uint16_t) (cursor_row * VGA_WIDTH + cursor_col);
+    u16 pos = (u16) (cursor_row * VGA_WIDTH + cursor_col);
     outb(0x3D4, 14);
-    outb(0x3D5, (uint8_t) (pos >> 8));
+    outb(0x3D5, (u8) (pos >> 8));
     outb(0x3D4, 15);
-    outb(0x3D5, (uint8_t) (pos & 0xFF));
+    outb(0x3D5, (u8) (pos & 0xFF));
 }
 
-static uint16_t read_hardware_cursor(void)
+static u16 read_hardware_cursor(void)
 {
-    uint16_t pos;
+    u16 pos;
     outb(0x3D4, 14);
-    pos = (uint16_t) inb(0x3D5) << 8;
+    pos = (u16) inb(0x3D5) << 8;
     outb(0x3D4, 15);
     pos |= inb(0x3D5);
     return pos;
 }
 
-void vga_enable_cursor(uint8_t start_scanline, uint8_t end_scanline)
+void vga_enable_cursor(u8 start_scanline, u8 end_scanline)
 {
     outb(0x3D4, 0x0A);
-    outb(0x3D5, (uint8_t) ((inb(0x3D5) & 0xC0) | start_scanline));
+    outb(0x3D5, (u8) ((inb(0x3D5) & 0xC0) | start_scanline));
     outb(0x3D4, 0x0B);
-    outb(0x3D5, (uint8_t) ((inb(0x3D5) & 0xE0) | end_scanline));
+    outb(0x3D5, (u8) ((inb(0x3D5) & 0xE0) | end_scanline));
 }
 
-void vga_set_color(uint8_t fg, uint8_t bg)
+void vga_set_color(u8 fg, u8 bg)
 {
-    color = (uint8_t) (fg | (bg << 4));
+    color = (u8) (fg | (bg << 4));
 }
 
 void vga_set_cursor_pos(size_t row, size_t col)
@@ -67,7 +68,7 @@ void vga_set_cursor_pos(size_t row, size_t col)
 
 void vga_get_cursor_pos(size_t *row, size_t *col)
 {
-    uint16_t pos = read_hardware_cursor();
+    u16 pos = read_hardware_cursor();
     *row = pos / VGA_WIDTH;
     *col = pos % VGA_WIDTH;
 }
@@ -159,7 +160,7 @@ void vga_write(const char *str)
     }
 }
 
-void vga_write_hex(uint64_t value)
+void vga_write_hex(u64 value)
 {
     const char *digits = "0123456789ABCDEF";
     char tmp[17];
@@ -178,7 +179,7 @@ void vga_write_hex(uint64_t value)
 
 void vga_set_blink(bool enabled)
 {
-    uint8_t value;
+    u8 value;
 
     inb(0x3DA);
     outb(0x3C0, 0x10);
