@@ -49,7 +49,9 @@ iso: $(KERNEL_BIN)
 	grub-mkrescue -o $(KERNEL_ISO) $(ISO_DIR)
 
 # Run GRUB bootable ISO in QEMU (Multiboot 2)
-run: iso
+run:
+	$(MAKE) clean
+	$(MAKE) iso
 	qemu-system-x86_64 -cdrom $(KERNEL_ISO)
 
 run-iso: run
