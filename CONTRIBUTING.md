@@ -64,7 +64,7 @@ The project uses GNU Make to automate compiling, linking, ISO generation, and te
 
 | Command | Description |
 | :--- | :--- |
-| **`make`** (or `make all`) | Compiles all assembly and C sources, links the 64-bit kernel (`build/kernel.bin`), and generates `build/kernel32.bin` for QEMU direct booting. |
+| **`make`** (or `make all`) | Compiles all assembly and C sources and links the 64-bit kernel (`build/kernel.bin`). |
 | **`make run`** | Builds the kernel and immediately launches it inside a QEMU virtual machine window. |
 | **`make iso`** | Packages GRUB and the 64-bit kernel into a bootable ISO image (`build/kernel.iso`) for flashing to USB drives (requires `xorriso`). |
 | **`make clean`** | Deletes the `build/` directory and all compiled binaries and object files. |
