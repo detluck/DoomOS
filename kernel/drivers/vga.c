@@ -1,6 +1,8 @@
 #include "vga.h"
 #include "arch/io.h"
 
+// https://github.com/torvalds/linux/blob/master/include/video/vga.h
+
 static size_t cursor_row = 0;
 static size_t cursor_col = 0;
 static uint8_t color = 0;
