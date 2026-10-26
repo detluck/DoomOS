@@ -66,6 +66,8 @@ test:
 	@mkdir -p $(BUILD_DIR)
 	$(HOST_CC) -Wall -Wextra -fno-builtin -Ikernel/include tests/test_string.c kernel/lib/string.c -o $(BUILD_DIR)/test_string
 	./$(BUILD_DIR)/test_string
+	$(HOST_CC) -Wall -Wextra -Ikernel/include tests/test_pmm.c -o $(BUILD_DIR)/test_pmm
+	./$(BUILD_DIR)/test_pmm
 
 # Code formatting (in-place)
 format:

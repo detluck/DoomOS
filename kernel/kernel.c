@@ -2,6 +2,7 @@
 #include "types.h"
 #include "arch/io.h"
 #include "mm/multiboot2.h"
+#include "mm/pmm.h"
 #include "lib/assert.h"
 
 void kernel_main(u64 magic, u64 mb2_info_adr)
@@ -15,6 +16,10 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
         panic("Failed to initialize Multiboot2: cannot detect physical memory!");
     }
     print_multiboot_mmap();
+
+    pmm_init();
+    pmm_test();
+
     vga_set_color(1, 2);
 
     vga_write("\nShutting down soons...\n");

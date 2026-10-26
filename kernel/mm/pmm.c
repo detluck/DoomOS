@@ -156,7 +156,7 @@ phys_addr_t pmm_alloc_frame(void)
 void pmm_free_frame(phys_addr_t phys_addr)
 {
     const pfn_t pfn = PHYS_TO_PFN(phys_addr);
-    if (pfn > total_frames) {
+    if (pfn >= total_frames) {
         pr_err("Pfn is bigger then total frames number");
         return;
     }
@@ -166,4 +166,48 @@ void pmm_free_frame(phys_addr_t phys_addr)
     }
     bitmap_clear(pfn);
     total_free_frames++;
+}
+
+void pmm_test(void)
+{
+    pr_info("Starting PMM self-test...");
+
+    const u64 free_start = pmm_get_free_frames();
+    assert(free_start > 0);
+
+    // 1. Allocate a single frame and check alignment
+    phys_addr_t f1 = pmm_alloc_frame();
+    assert(f1 != 0);
+    assert((f1 & (PAGE_SIZE - 1)) == 0);
+    assert(pmm_get_free_frames() == free_start - 1);
+
+    // 2. Verify frame is NOT in reserved memory zones
+    assert(f1 >= 0x100000);
+    assert(f1 < (phys_addr_t) _kernel_start || f1 >= (phys_addr_t) _kernel_end);
+    const u64 bitmap_size_words = (total_frames + 63) / 64;
+    const u64 bitmap_size_bytes = bitmap_size_words * sizeof(u64);
+    assert(f1 < (phys_addr_t) bitmap || f1 >= (phys_addr_t) bitmap + bitmap_size_bytes);
+
+    // 3. Allocate multiple consecutive frames and ensure uniqueness
+    phys_addr_t f2 = pmm_alloc_frame();
+    phys_addr_t f3 = pmm_alloc_frame();
+    assert(f2 != 0 && f3 != 0);
+    assert(f1 != f2 && f2 != f3 && f1 != f3);
+    assert(pmm_get_free_frames() == free_start - 3);
+
+    // 4. Free one frame and verify recycling
+    pmm_free_frame(f2);
+    assert(pmm_get_free_frames() == free_start - 2);
+
+    phys_addr_t f4 = pmm_alloc_frame();
+    assert(f4 == f2);
+    assert(pmm_get_free_frames() == free_start - 3);
+
+    // 5. Clean up all test allocations
+    pmm_free_frame(f1);
+    pmm_free_frame(f3);
+    pmm_free_frame(f4);
+    assert(pmm_get_free_frames() == free_start);
+
+    pr_ok("PMM self-test passed successfully!");
 }

@@ -16,3 +16,5 @@ void pmm_free_frame(phys_addr_t phys_addr);
 
 u64 pmm_get_total_frames(void);
 u64 pmm_get_free_frames(void);
+
+void pmm_test(void);
