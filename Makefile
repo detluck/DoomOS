@@ -3,7 +3,7 @@ LD = ld
 AS = nasm
 
 # Compiler flags for freestanding 64-bit kernel
-CFLAGS = -m64 -ffreestanding -fno-stack-protector -mno-red-zone -Wall -Wextra -nostdlib -O2 -Ikernel/include
+CFLAGS = -m64 -ffreestanding -fno-stack-protector -mno-red-zone -mgeneral-regs-only -Wall -Wextra -nostdlib -O2 -Ikernel/include
 ASFLAGS = -f elf64
 LDFLAGS = -n -T linker.ld --no-warn-rwx-segments
 
@@ -24,7 +24,7 @@ KERNEL_ISO = $(BUILD_DIR)/kernel.iso
 
 HOST_CC ?= gcc
 
-.PHONY: all run iso clean test format format-check lint
+.PHONY: all run run-iso iso clean test format format-check lint
 
 all: $(KERNEL_BIN) $(KERNEL_BIN32)
 
@@ -53,15 +53,21 @@ iso: $(KERNEL_BIN)
 	cp boot/grub.cfg $(ISO_DIR)/boot/grub/grub.cfg
 	grub-mkrescue -o $(KERNEL_ISO) $(ISO_DIR)
 
-# Run directly in QEMU
+# Run directly in QEMU (Multiboot 1 direct kernel boot)
 run: $(KERNEL_BIN32)
 	qemu-system-x86_64 -kernel $(KERNEL_BIN32)
+
+# Run GRUB bootable ISO in QEMU (Multiboot 2 via GRUB)
+run-iso: iso
+	qemu-system-x86_64 -cdrom $(KERNEL_ISO)
 
 # Host-side unit tests
 test:
 	@mkdir -p $(BUILD_DIR)
 	$(HOST_CC) -Wall -Wextra -fno-builtin -Ikernel/include tests/test_string.c kernel/lib/string.c -o $(BUILD_DIR)/test_string
 	./$(BUILD_DIR)/test_string
+	$(HOST_CC) -Wall -Wextra -Ikernel/include tests/test_pmm.c -o $(BUILD_DIR)/test_pmm
+	./$(BUILD_DIR)/test_pmm
 
 # Code formatting (in-place)
 format:

@@ -1,18 +1,24 @@
-#include "include/vga.h"
-#include <stdint.h>
+#include "vga.h"
+#include "types.h"
+#include "arch/io.h"
+#include "mm/multiboot2.h"
+#include "mm/pmm.h"
+#include "lib/assert.h"
 
-static inline void outw(uint16_t port, uint16_t val)
-{
-    __asm__ volatile("outw %0, %1" : : "a"(val), "Nd"(port));
-}
-
-void kernel_main(void)
+void kernel_main(u64 magic, u64 mb2_info_adr)
 {
     vga_init();
 
     vga_set_color(VGA_COLOR_YELLOW, VGA_COLOR_CYAN);
     vga_write("DoomOS 64-bit kernel initialized.\n");
     vga_write("VGA text driver online: 80x25, hardware cursor, scrolling.\n\n");
+    if (!multiboot_init(magic, mb2_info_adr)) {
+        panic("Failed to initialize Multiboot2: cannot detect physical memory!");
+    }
+    print_multiboot_mmap();
+
+    pmm_init();
+    pmm_test();
 
     vga_set_color(VGA_COLOR_BLUE, VGA_COLOR_GREEN);
 

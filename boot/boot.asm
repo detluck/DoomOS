@@ -19,6 +19,10 @@ start:
     ; Set up initial 32-bit stack
     mov esp, stack_top
 
+    ; Save Multiboot bootloader arguments in ABI registers
+    mov edi, eax        ; 1st argument: Multiboot magic
+    mov esi, ebx        ; 2nd argument: Multiboot info physical address
+
     ; 1. Set up page table hierarchy (identity-map first 2 MiB)
     ; Link P4 table to P3 table
     mov eax, p3_table
@@ -75,7 +79,13 @@ long_mode_start:
     ; Set up 64-bit stack pointer
     mov rsp, stack_top
 
-    ; Call 64-bit C kernel_main
+    ; Zero-extend 32-bit Multiboot arguments into 64-bit ABI registers:
+    ; RDI = 1st argument (magic)
+    ; RSI = 2nd argument (multiboot_info physical address)
+    mov edi, edi
+    mov esi, esi
+
+    ; Call 64-bit C kernel_main(magic, mb_info_addr)
     call kernel_main
 
     ; Halt the CPU if kernel_main ever returns
