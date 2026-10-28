@@ -21,10 +21,13 @@ gdt_load:
     retfq
 
 .reload_segments:
-    ; Reload data/stack selectors; leave FS/GS and interrupt state untouched.
+    ; Reload data/stack selectors and explicitly zero FS/GS to null descriptor.
     mov ds, dx
     mov es, dx
     mov ss, dx
+    xor eax, eax
+    mov fs, ax
+    mov gs, ax
 
     ; Return to C using the original return address.
     ret
