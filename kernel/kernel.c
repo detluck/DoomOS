@@ -5,6 +5,7 @@
 #include "mm/multiboot2.h"
 #include "mm/pmm.h"
 #include "lib/assert.h"
+#include "lib/kprintf.h"
 
 void kernel_main(u64 magic, u64 mb2_info_adr)
 {
@@ -23,6 +24,12 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
 
     pmm_init();
     pmm_test();
+
+    // kprintf examples
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+    kprintf("\nkprintf: %s %c %d %u %x %%\n", "hello", 'A', -42, 42u, 0xbeefu);
+    kprintf("kprintf: free frames %lu / %lu\n", pmm_get_free_frames(), pmm_get_total_frames());
+    kprintf("kprintf: kernel_main at %p\n", (void *) kernel_main);
 
     vga_set_color(VGA_COLOR_BLUE, VGA_COLOR_GREEN);
 
