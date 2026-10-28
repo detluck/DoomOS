@@ -11,11 +11,14 @@ BUILD_DIR = build
 ISO_DIR = $(BUILD_DIR)/isodir
 
 # Source files
-ASM_SRC = boot/header.asm boot/boot.asm
+BOOT_ASM_SRC = boot/header.asm boot/boot.asm
+ARCH_ASM_SRC = $(wildcard kernel/arch/*.asm)
 C_SRC = $(shell find kernel -type f -name '*.c')
 
 # Object files
-ASM_OBJ = $(patsubst boot/%.asm, $(BUILD_DIR)/%.o, $(ASM_SRC))
+BOOT_ASM_OBJ = $(patsubst boot/%.asm, $(BUILD_DIR)/%.o, $(BOOT_ASM_SRC))
+ARCH_ASM_OBJ = $(patsubst kernel/arch/%.asm, $(BUILD_DIR)/asm/arch/%.o, $(ARCH_ASM_SRC))
+ASM_OBJ = $(BOOT_ASM_OBJ) $(ARCH_ASM_OBJ)
 C_OBJ = $(patsubst kernel/%.c, $(BUILD_DIR)/%.o, $(C_SRC))
 
 KERNEL_BIN = $(BUILD_DIR)/kernel.bin
@@ -30,6 +33,11 @@ all: $(KERNEL_BIN)
 # Assemble NASM files
 $(BUILD_DIR)/%.o: boot/%.asm
 	@mkdir -p $(BUILD_DIR)
+	$(AS) $(ASFLAGS) $< -o $@
+
+# Assemble kernel architecture NASM files separately from C objects
+$(BUILD_DIR)/asm/arch/%.o: kernel/arch/%.asm
+	@mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) $< -o $@
 
 # Compile C files

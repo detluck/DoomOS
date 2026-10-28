@@ -1,4 +1,5 @@
 #include "vga.h"
+#include "gdt.h"
 #include "types.h"
 #include "arch/io.h"
 #include "mm/multiboot2.h"
@@ -12,6 +13,9 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
     vga_set_color(VGA_COLOR_YELLOW, VGA_COLOR_CYAN);
     vga_write("DoomOS 64-bit kernel initialized.\n");
     vga_write("VGA text driver online: 80x25, hardware cursor, scrolling.\n\n");
+
+    gdt_init();
+
     if (!multiboot_init(magic, mb2_info_adr)) {
         panic("Failed to initialize Multiboot2: cannot detect physical memory!");
     }
