@@ -164,7 +164,7 @@ static void gdt_check_tss_descriptor(uintptr_t base, u32 limit, u8 access)
     const u64 lower = entries[GDT_TSS_INDEX];
     const u64 upper = entries[GDT_TSS_INDEX + 1];
     const u64 loaded_base = ((lower >> 16) & 0xFFFFFFULL) | ((lower >> 32) & 0xFF000000ULL) |
-                      ((upper & 0xFFFFFFFFULL) << 32);
+                            ((upper & 0xFFFFFFFFULL) << 32);
     const u32 loaded_limit = (u32) (lower & 0xFFFFULL) | (u32) ((lower >> 32) & 0xF0000ULL);
 
     if (loaded_base != base || loaded_limit != limit) {
