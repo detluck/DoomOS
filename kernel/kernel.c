@@ -1,3 +1,4 @@
+#include "mm/vmm.h"
 #include "vga.h"
 #include "gdt.h"
 #include "types.h"
@@ -24,7 +25,8 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
 
     pmm_init();
     pmm_test();
-
+    vmm_init();
+    vmm_test();
     // kprintf examples
     vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     kprintf("\nkprintf: %s %c %d %u %x %%\n", "hello", 'A', -42, 42u, 0xbeefu);

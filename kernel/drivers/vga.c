@@ -9,9 +9,9 @@ static size_t cursor_col = 0;
 static u8 color = 0;
 static volatile u16 *buffer = VGA_MEMORY;
 
-static inline u16 make_entry(char c, u8 color)
+static inline u16 make_entry(char c, u8 entry_color)
 {
-    return (u16) ((u16) color << 8) | (u8) c;
+    return (u16) ((u16) entry_color << 8) | (u8) c;
 }
 
 // crtc registers on ports 0x3D4 / 0x3D5
