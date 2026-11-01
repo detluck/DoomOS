@@ -1,6 +1,7 @@
 #include "mm/vmm.h"
 #include "vga.h"
 #include "gdt.h"
+#include "tss.h"
 #include "types.h"
 #include "arch/io.h"
 #include "mm/multiboot2.h"
@@ -17,6 +18,7 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
     vga_write("VGA text driver online: 80x25, hardware cursor, scrolling.\n\n");
 
     gdt_init();
+    tss_init();
 
     if (!multiboot_init(magic, mb2_info_adr)) {
         panic("Failed to initialize Multiboot2: cannot detect physical memory!");
