@@ -36,16 +36,6 @@ static void update_hardware_cursor(void)
     outb(0x3D5, (u8) (pos & 0xFF));
 }
 
-static u16 read_hardware_cursor(void)
-{
-    u16 pos;
-    outb(0x3D4, 14);
-    pos = (u16) inb(0x3D5) << 8;
-    outb(0x3D4, 15);
-    pos |= inb(0x3D5);
-    return pos;
-}
-
 void vga_enable_cursor(u8 start_scanline, u8 end_scanline)
 {
     outb(0x3D4, 0x0A);
@@ -68,9 +58,8 @@ void vga_set_cursor_pos(size_t row, size_t col)
 
 void vga_get_cursor_pos(size_t *row, size_t *col)
 {
-    u16 pos = read_hardware_cursor();
-    *row = pos / VGA_WIDTH;
-    *col = pos % VGA_WIDTH;
+    *row = cursor_row;
+    *col = cursor_col;
 }
 
 void vga_clear(void)
@@ -88,7 +77,7 @@ void vga_clear(void)
     update_hardware_cursor();
 }
 
-void vga_scroll(void)
+static void scroll_raw(void)
 {
     // move every row up by one
     for (size_t y = 1; y < VGA_HEIGHT; y++) {
@@ -107,38 +96,21 @@ void vga_scroll(void)
     }
 }
 
+void vga_scroll(void)
+{
+    scroll_raw();
+    update_hardware_cursor();
+}
+
 static void newline(void)
 {
     cursor_col = 0;
     if (++cursor_row == VGA_HEIGHT) {
-        vga_scroll();
+        scroll_raw();
     }
 }
 
-void vga_putchar(char c)
-{
-    if (c == '\n') {
-        newline();
-    } else if (c == '\r') {
-        cursor_col = 0;
-    } else if (c == '\b') {
-        vga_backspace();
-        return;
-    } else if (c == '\t') {
-        // tab, multiples of 8
-        do {
-            buffer[cursor_row * VGA_WIDTH + cursor_col] = make_entry(' ', color);
-        } while (++cursor_col % 8 != 0 && cursor_col < VGA_WIDTH);
-    } else {
-        buffer[cursor_row * VGA_WIDTH + cursor_col] = make_entry(c, color);
-        if (++cursor_col == VGA_WIDTH) {
-            newline();
-        }
-    }
-    update_hardware_cursor();
-}
-
-void vga_backspace(void)
+static void backspace_raw(void)
 {
     if (cursor_col == 0) {
         if (cursor_row == 0) {
@@ -150,14 +122,51 @@ void vga_backspace(void)
         cursor_col--;
     }
     buffer[cursor_row * VGA_WIDTH + cursor_col] = make_entry(' ', color);
+}
+
+// writes one char without touching the hardware cursor; callers update it once
+static void put_char_raw(char c)
+{
+    if (c == '\n') {
+        newline();
+    } else if (c == '\r') {
+        cursor_col = 0;
+    } else if (c == '\b') {
+        backspace_raw();
+    } else if (c == '\t') {
+        // tab, multiples of 8
+        do {
+            buffer[cursor_row * VGA_WIDTH + cursor_col] = make_entry(' ', color);
+        } while (++cursor_col % 8 != 0 && cursor_col < VGA_WIDTH);
+        if (cursor_col >= VGA_WIDTH) {
+            newline();
+        }
+    } else {
+        buffer[cursor_row * VGA_WIDTH + cursor_col] = make_entry(c, color);
+        if (++cursor_col == VGA_WIDTH) {
+            newline();
+        }
+    }
+}
+
+void vga_putchar(char c)
+{
+    put_char_raw(c);
+    update_hardware_cursor();
+}
+
+void vga_backspace(void)
+{
+    backspace_raw();
     update_hardware_cursor();
 }
 
 void vga_write(const char *str)
 {
     for (size_t i = 0; str[i] != '\0'; i++) {
-        vga_putchar(str[i]);
+        put_char_raw(str[i]);
     }
+    update_hardware_cursor();
 }
 
 void vga_write_hex(u64 value)
