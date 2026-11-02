@@ -124,9 +124,12 @@ void vmm_init(void)
     // 2. Map the Linux Direct Map (0xFFFF8000...):
     vmm_map_range(kernel_pml4, DIRECT_MAP_OFFSET, 0x0, ram_size, VMM_FLAG_WRITABLE);
 
+    // 3. Map Higher-Half Kernel (0xFFFFFFFF80000000... keeps RIP alive!):
+    vmm_map_range(kernel_pml4, KERNEL_VIRT_OFFSET, 0x0, ram_size, VMM_FLAG_WRITABLE);
+
     vmm_switch_pml4(pml4_phys);
 
-    // 3. Update pointer to use the direct map:
+    // 4. Update pointer to use the direct map:
     kernel_pml4 = (pml4_t *) PHYS_TO_VIRT_DIRECT(pml4_phys);
     pr_ok("VMM is initialized with Linux Direct Map");
 }

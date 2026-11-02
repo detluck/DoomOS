@@ -8,6 +8,7 @@
 #define PAGE_OFFSET_MASK (PAGE_SIZE - 1)
 #define PTE_ADDR_MASK 0x000FFFFFFFFFF000ULL
 #define DIRECT_MAP_OFFSET 0xFFFF800000000000
+#define KERNEL_VIRT_OFFSET 0xFFFFFFFF80000000ULL
 
 // macros for kernel memory only
 #define VIRT_TO_PHYS_DIRECT(vaddr) ((phys_addr_t) (vaddr) - DIRECT_MAP_OFFSET)

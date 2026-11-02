@@ -7,10 +7,13 @@
 #define LOG_SCOPE "PMM"
 #include "lib/log.h"
 
+extern u8 _kernel_phys_end[];
+extern u8 _kernel_phys_start[];
 extern u8 _kernel_end[];
 extern u8 _kernel_start[];
 
 static u64 *bitmap = NULL;
+static phys_addr_t bitmap_phys = 0;
 static u64 total_frames = 0;
 static u64 total_free_frames = 0;
 
@@ -103,7 +106,9 @@ void pmm_init(void)
     // calculate total frames given from multiboot2
     pmm_calculate_start_frames();
 
-    bitmap = (u64 *) _kernel_end;
+    // Place bitmap 64 KiB after kernel physical end to avoid colliding with Multiboot2 info
+    bitmap_phys = (phys_addr_t) _kernel_phys_end + 0x10000ULL;
+    bitmap = (u64 *) ((uintptr_t) _kernel_end + 0x10000ULL);
 
     // set all frames as used by default
     u64 bitmap_size_words = (total_frames + 63) / 64;
@@ -116,13 +121,13 @@ void pmm_init(void)
 
     // reserve first MiB for BIOS, VGA, etc...
     pmm_reserve_range(0x0, 0x100000);
-    // reserve kernel code
-    pmm_reserve_range((u64) _kernel_start, (u64) _kernel_end - (u64) _kernel_start);
+    // reserve all bootstrap and kernel code from 1 MiB to _kernel_phys_end
+    pmm_reserve_range(0x100000, (phys_addr_t) _kernel_phys_end - 0x100000);
     // reserve bitmap itself
-    pmm_reserve_range((u64) bitmap, bitmap_size_bytes);
+    pmm_reserve_range(bitmap_phys, bitmap_size_bytes);
     // reserve mmap struct
     const struct multiboot_tag_mmap *mmap = get_multiboot_mmap();
-    pmm_reserve_range((u64) mmap, mmap->size);
+    pmm_reserve_range((phys_addr_t) mmap, mmap->size);
 }
 
 phys_addr_t pmm_alloc_frame(void)
@@ -183,10 +188,10 @@ void pmm_test(void)
 
     // 2. Verify frame is NOT in reserved memory zones
     assert(f1 >= 0x100000);
-    assert(f1 < (phys_addr_t) _kernel_start || f1 >= (phys_addr_t) _kernel_end);
+    assert(f1 >= (phys_addr_t) _kernel_phys_end);
     const u64 bitmap_size_words = (total_frames + 63) / 64;
     const u64 bitmap_size_bytes = bitmap_size_words * sizeof(u64);
-    assert(f1 < (phys_addr_t) bitmap || f1 >= (phys_addr_t) bitmap + bitmap_size_bytes);
+    assert(f1 < bitmap_phys || f1 >= bitmap_phys + bitmap_size_bytes);
 
     // 3. Allocate multiple consecutive frames and ensure uniqueness
     phys_addr_t f2 = pmm_alloc_frame();
