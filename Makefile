@@ -82,13 +82,18 @@ format-check:
 
 # Static analysis
 lint:
-	cppcheck --enable=warning,style,performance,portability \
+	cppcheck --enable=all \
+	         --inconclusive \
+	         --check-level=exhaustive \
+	         --std=c11 \
 	         --error-exitcode=1 \
 	         --inline-suppr \
 	         --suppress=missingIncludeSystem \
 	         --suppress=unusedFunction \
+	         --suppress=staticFunction \
+	         --suppress=checkersReport \
+					 --suppress=unmatchedSuppression \
 	         -Ikernel/include \
 	         kernel/
-
 clean:
 	rm -rf $(BUILD_DIR)

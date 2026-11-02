@@ -23,10 +23,10 @@ static page_table_t *get_or_create_table(page_table_t *table, size_t index, bool
             if (paddr == 0) {
                 return NULL;
             }
-            memset((void *) paddr, 0, sizeof(page_table_t));
+            memset((void *) PHYS_TO_VIRT_DIRECT(paddr), 0, sizeof(page_table_t));
             table->entries[index] =
                 paddr | VMM_FLAG_PRESENT | VMM_FLAG_WRITABLE | (flags & VMM_FLAG_USER);
-            return (page_table_t *) paddr;
+            return (page_table_t *) PHYS_TO_VIRT_DIRECT(paddr);
         }
     }
 }
@@ -117,7 +117,7 @@ void vmm_init(void)
 
     // map all allocated RAM
     phys_addr_t ram_size = PFN_TO_PHYS(pmm_get_total_frames());
-    vmm_map_range(kernel_pml4, 0x0, 0x0, ram_size, VMM_FLAG_WRITABLE);
+    vmm_map_range(kernel_pml4, DIRECT_MAP_OFFSET, 0x0, ram_size, VMM_FLAG_WRITABLE);
 
     vmm_switch_pml4(kernel_pml4);
     pr_ok("VMM is initialized");

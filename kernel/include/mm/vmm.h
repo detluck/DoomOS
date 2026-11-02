@@ -7,6 +7,11 @@
 #define PAGE_TABLE_ENTRIES 512
 #define PAGE_OFFSET_MASK (PAGE_SIZE - 1)
 #define PTE_ADDR_MASK 0x000FFFFFFFFFF000ULL
+#define DIRECT_MAP_OFFSET 0xFFFF800000000000
+
+// macros for kernel memory only
+#define VIRT_TO_PHYS_DIRECT(vaddr) ((phys_addr_t) (vaddr) - DIRECT_MAP_OFFSET)
+#define PHYS_TO_VIRT_DIRECT(paddr) ((virt_addr_t) (paddr) + DIRECT_MAP_OFFSET)
 
 // avl flags macro
 #define VMM_AVL_SHIFT 9
@@ -62,9 +67,9 @@ static __always_inline size_t vmm_page_offset(virt_addr_t vaddr)
     return vaddr & 0xFFF;
 }
 
-static __always_inline void vmm_invlpg(virt_addr_t vaddr)
+static __always_inline void vmm_invlpg(phys_addr_t paddr)
 {
-    __asm__ volatile("invlpg (%0)" : : "r"(vaddr) : "memory");
+    __asm__ volatile("invlpg (%0)" : : "r"(paddr) : "memory");
 }
 
 static __always_inline void vmm_switch_pml4(const pml4_t *pml4)
