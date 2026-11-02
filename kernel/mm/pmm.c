@@ -148,7 +148,6 @@ phys_addr_t pmm_alloc_frame(void)
                 if (!bitmap_test(pfn)) {
                     bitmap_set(pfn);
                     total_free_frames--;
-                    pr_info("Allocated pfn");
                     return PFN_TO_PHYS(pfn);
                 }
             }
@@ -175,7 +174,6 @@ void pmm_free_frame(phys_addr_t phys_addr)
 
 void pmm_test(void)
 {
-    pr_info("Starting PMM self-test...");
 
     const u64 free_start = pmm_get_free_frames();
     assert(free_start > 0);
