@@ -116,15 +116,15 @@ start:
     or eax, 1 << 5
     mov cr4, eax
 
-    ; 9. Enable Long Mode (LME) in EFER MSR (0xC0000080)
+    ; 9. Enable Long Mode + NX in EFER
     mov ecx, 0xC0000080
     rdmsr
-    or eax, 1 << 8
+    or eax, (1 << 8) | (1 << 11)    ; LME | NXE
     wrmsr
 
-    ; 10. Enable Paging & Protected Mode in CR0
+    ; 10. Enable Paging + Write Protect
     mov eax, cr0
-    or eax, 1 << 31
+    or eax, (1 << 31) | (1 << 16)   ; PG | WP
     mov cr0, eax
 
     ; 11. Load 64-bit GDT (physical pointer)

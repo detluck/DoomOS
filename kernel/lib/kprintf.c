@@ -7,7 +7,7 @@
 static void print_num(u64 value, unsigned base)
 {
     const char *digits = "0123456789abcdef";
-    char buf[20]; // u64 max is 20 decimal digits
+    char buf[32]; // safe margin for 64-bit integer strings
     int i = 0;
 
     do {

@@ -14,20 +14,31 @@ SECTIONS {
       *(.boot.bss)
   }
 
-  /* 2. Higher-half kernel code and data mapped at 0xFFFFFFFF80000000 */
+  /* 2. Higher-half kernel, starting on a fresh page */
   . += KERNEL_VIRT_BASE;
+  . = ALIGN(4096);
   _kernel_start = .;
 
+  /* RX */
+  _text_start = .;
   .text : AT(ADDR(.text) - KERNEL_VIRT_BASE) {
       *(.text)
       *(.text.*)
   }
+  . = ALIGN(4096);
+  _text_end = .;
 
+  /* R, NX */
+  _rodata_start = .;
   .rodata : AT(ADDR(.rodata) - KERNEL_VIRT_BASE) {
       *(.rodata)
       *(.rodata.*)
   }
+  . = ALIGN(4096);
+  _rodata_end = .;
 
+  /* RW, NX */
+  _data_start = .;
   .data : AT(ADDR(.data) - KERNEL_VIRT_BASE) {
       *(.data)
       *(.data.*)
@@ -38,8 +49,8 @@ SECTIONS {
       *(.bss.*)
       *(COMMON)
   }
-
   . = ALIGN(4096);
+  _data_end = .;
   _kernel_end = .;
 
   /* Physical addresses for PMM frame reservation */

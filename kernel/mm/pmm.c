@@ -2,6 +2,7 @@
 #include "lib/assert.h"
 #include "lib/string.h"
 #include "mm/multiboot2.h"
+#include "mm/vmm.h"
 #include "types.h"
 
 #define LOG_SCOPE "PMM"
@@ -79,6 +80,9 @@ static void pmm_set_start_free_frames(void)
 
 static void pmm_reserve_range(phys_addr_t start, u64 size)
 {
+    if (size == 0) {
+        return;
+    }
     pfn_t start_pfn = PHYS_TO_PFN(start);
     pfn_t end_pfn = PHYS_TO_PFN(start + size + PAGE_SIZE - 1);
 
@@ -103,31 +107,39 @@ u64 pmm_get_free_frames(void)
 
 void pmm_init(void)
 {
-    // calculate total frames given from multiboot2
+    // total_frames from the multiboot2 memory map
     pmm_calculate_start_frames();
 
-    // Place bitmap 64 KiB after kernel physical end to avoid colliding with Multiboot2 info
-    bitmap_phys = (phys_addr_t) _kernel_phys_end + 0x10000ULL;
-    bitmap = (u64 *) ((uintptr_t) _kernel_end + 0x10000ULL);
+    // 2. Find where the multiboot2 info lives, so the bitmap can't land on it
+    phys_addr_t mb2_phys = 0;
+    u64 mb2_size = 0;
+    const bool have_mb2 = multiboot_get_bounds(&mb2_phys, &mb2_size);
 
-    // set all frames as used by default
-    u64 bitmap_size_words = (total_frames + 63) / 64;
-    u64 bitmap_size_bytes = bitmap_size_words * sizeof(u64);
+    // place the bitmap after the kernel and after the MB2 info 8-byte aligned,
+    // and access it through the direct map
+    phys_addr_t bm_start = (phys_addr_t) _kernel_phys_end;
+    if (have_mb2 && mb2_phys + mb2_size > bm_start) {
+        bm_start = mb2_phys + mb2_size;
+    }
+    bitmap_phys = ALIGN_UP(bm_start, 8);
+    bitmap = (u64 *) PHYS_TO_VIRT_DIRECT(bitmap_phys);
+
+    // mark all frames as used
+    const u64 bitmap_size_words = (total_frames + 63) / 64;
+    const u64 bitmap_size_bytes = bitmap_size_words * sizeof(u64);
     memset(bitmap, 0xFF, bitmap_size_bytes);
 
-    // search free ram frames, set them to 0 and calculate total_free_frames
+    // free every frame the memory map reports as available
     total_free_frames = 0;
     pmm_set_start_free_frames();
 
-    // reserve first MiB for BIOS, VGA, etc...
-    pmm_reserve_range(0x0, 0x100000);
-    // reserve all bootstrap and kernel code from 1 MiB to _kernel_phys_end
-    pmm_reserve_range(0x100000, (phys_addr_t) _kernel_phys_end - 0x100000);
-    // reserve bitmap itself
-    pmm_reserve_range(bitmap_phys, bitmap_size_bytes);
-    // reserve mmap struct
-    const struct multiboot_tag_mmap *mmap = get_multiboot_mmap();
-    pmm_reserve_range((phys_addr_t) mmap, mmap->size);
+    // re-reserve everything that must not be handed out
+    pmm_reserve_range(0x0, 0x100000);                                       // BIOS, VGA, etc.
+    pmm_reserve_range(0x100000, (phys_addr_t) _kernel_phys_end - 0x100000); // kernel image
+    pmm_reserve_range(bitmap_phys, bitmap_size_bytes);                      // the bitmap itself
+    if (have_mb2) {
+        pmm_reserve_range(mb2_phys, mb2_size); // MB2 info
+    }
 }
 
 phys_addr_t pmm_alloc_frame(void)
@@ -142,7 +154,7 @@ phys_addr_t pmm_alloc_frame(void)
             for (u8 bit = 0; bit < 64; bit++) {
                 pfn_t pfn = (i * 64) + bit;
                 if (pfn >= total_frames) {
-                    pr_err("Pfn is bigger then total frames number");
+                    pr_err("PFN exceeds total frame count");
                     break;
                 }
                 if (!bitmap_test(pfn)) {
@@ -159,13 +171,17 @@ phys_addr_t pmm_alloc_frame(void)
 
 void pmm_free_frame(phys_addr_t phys_addr)
 {
+    if (phys_addr & (PAGE_SIZE - 1)) {
+        pr_err("Trying to free unaligned frame");
+        return;
+    }
     const pfn_t pfn = PHYS_TO_PFN(phys_addr);
     if (pfn >= total_frames) {
-        pr_err("Pfn is bigger then total frames number");
+        pr_err("PFN exceeds total frame count");
         return;
     }
     if (!bitmap_test(pfn)) {
-        pr_err("Trying to free alredy free frame");
+        pr_err("Trying to free already free frame");
         return;
     }
     bitmap_clear(pfn);

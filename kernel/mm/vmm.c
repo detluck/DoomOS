@@ -1,18 +1,24 @@
 #include "mm/vmm.h"
 #include "lib/string.h"
+#include "mm/multiboot2.h"
 #include "mm/pmm.h"
 #include "types.h"
 #include "lib/assert.h"
+#include <stdbool.h>
 #define LOG_SCOPE "VMM"
 #include "lib/log.h"
 
 static pml4_t *kernel_pml4 = NULL;
+static bool boot_map_active = true;
 
 static page_table_t *get_or_create_table(page_table_t *table, size_t index, bool allocate,
                                          u64 flags)
 {
     pt_entry_t entry = table->entries[index];
     if (entry & VMM_FLAG_PRESENT) {
+        if (flags & VMM_FLAG_USER) {
+            table->entries[index] |= VMM_FLAG_USER;
+        }
         phys_addr_t paddr = entry & PTE_ADDR_MASK;
         return (page_table_t *) PHYS_TO_VIRT_DIRECT(paddr);
     } else {
@@ -22,6 +28,9 @@ static page_table_t *get_or_create_table(page_table_t *table, size_t index, bool
             phys_addr_t paddr = pmm_alloc_frame();
             if (paddr == 0) {
                 return NULL;
+            }
+            if (boot_map_active && paddr >= (1ULL << 30)) {
+                panic("VMM: page table frame outside boot direct map");
             }
             memset((void *) PHYS_TO_VIRT_DIRECT(paddr), 0, sizeof(page_table_t));
             table->entries[index] =
@@ -113,28 +122,33 @@ phys_addr_t vmm_virt_to_phys(pml4_t *pml4, virt_addr_t vaddr)
 void vmm_init(void)
 {
     phys_addr_t pml4_phys = pmm_alloc_frame();
-
+    if (!pml4_phys) {
+        panic("No frame for PML4");
+    }
     // Immediately assign the Direct Map virtual pointer for C code
     kernel_pml4 = (pml4_t *) PHYS_TO_VIRT_DIRECT(pml4_phys);
     memset(kernel_pml4, 0, sizeof(pml4_t));
 
-    phys_addr_t ram_size = PFN_TO_PHYS(pmm_get_total_frames());
+    phys_addr_t ram_size = multiboot_get_max_phys();
 
     // Map Direct Map
     vmm_map_range(kernel_pml4, DIRECT_MAP_OFFSET, 0x0, ram_size, VMM_FLAG_WRITABLE);
     // Map Higher-Half Kernel
-    vmm_map_range(kernel_pml4, KERNEL_VIRT_OFFSET, 0x0, 16 * 1024 * 1024, VMM_FLAG_WRITABLE);
+    extern u8 _kernel_phys_end[];
+    size_t kernel_size = ALIGN_UP((size_t) _kernel_phys_end, PAGE_SIZE);
+    if (!vmm_map_range(kernel_pml4, KERNEL_VIRT_OFFSET, 0x0, kernel_size, VMM_FLAG_WRITABLE)) {
+        panic("VMM: kernel map failed");
+    }
 
     // Pass the RAW PHYSICAL address to CR3
     vmm_switch_pml4(pml4_phys);
+    boot_map_active = false;
 
     pr_ok("VMM is initialized with Linux Direct Map");
 }
 
 void vmm_test(void)
 {
-
-    pr_info("Starting VMM self-test...");
 
     virt_addr_t test_vaddr = 0x10000000;
     phys_addr_t test_frame = pmm_alloc_frame();
@@ -158,5 +172,7 @@ void vmm_test(void)
     pmm_free_frame(test_frame);
     assert(!vmm_is_mapped(kernel_pml4, 0x0));
     assert(!vmm_is_mapped(kernel_pml4, 0x100000));
+    assert(get_multiboot_mmap() != NULL);
+    assert(get_multiboot_mmap()->size > 0);
     pr_ok("VMM self-test passed successfully!");
 }
