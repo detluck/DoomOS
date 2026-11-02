@@ -1,34 +1,53 @@
 ENTRY(start)
 
-SECTIONS {
-  /* Load kernel at 1 MiB physical address */
-  . = 1M;
-  _kernel_start = .;
+KERNEL_VIRT_BASE = 0xFFFFFFFF80000000;
 
-  /* Multiboot header */
+SECTIONS {
+  /* 1. Multiboot2 header and early 32-bit bootstrap code at physical 1 MiB */
+  . = 1M;
+
   .boot : {
       KEEP(*(.multiboot_header))
+      *(.boot.text)
+      *(.boot.rodata)
+      *(.boot.data)
+      *(.boot.bss)
   }
 
-  /* Kernel executable code */
-  .text : {
+  /* 2. Higher-half kernel code and data mapped at 0xFFFFFFFF80000000 */
+  . += KERNEL_VIRT_BASE;
+  _kernel_start = .;
+
+  .text : AT(ADDR(.text) - KERNEL_VIRT_BASE) {
       *(.text)
+      *(.text.*)
   }
 
-  /* Read-only data (strings, constants) */
-  .rodata : {
+  .rodata : AT(ADDR(.rodata) - KERNEL_VIRT_BASE) {
       *(.rodata)
+      *(.rodata.*)
   }
 
-  /* Initialized global/static variables */
-  .data : {
+  .data : AT(ADDR(.data) - KERNEL_VIRT_BASE) {
       *(.data)
+      *(.data.*)
   }
 
-  /* Uninitialized variables and the stack */
-  .bss : {
+  .bss : AT(ADDR(.bss) - KERNEL_VIRT_BASE) {
       *(.bss)
+      *(.bss.*)
+      *(COMMON)
   }
+
   . = ALIGN(4096);
   _kernel_end = .;
+
+  /* Physical addresses for PMM frame reservation */
+  _kernel_phys_start = _kernel_start - KERNEL_VIRT_BASE;
+  _kernel_phys_end   = _kernel_end - KERNEL_VIRT_BASE;
+
+  /DISCARD/ : {
+      *(.comment)
+      *(.eh_frame)
+  }
 }
