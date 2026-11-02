@@ -112,15 +112,23 @@ phys_addr_t vmm_virt_to_phys(pml4_t *pml4, virt_addr_t vaddr)
 
 void vmm_init(void)
 {
-    kernel_pml4 = (pml4_t *) pmm_alloc_frame();
+    phys_addr_t pml4_phys = pmm_alloc_frame();
+    kernel_pml4 = (pml4_t *) pml4_phys;
     memset(kernel_pml4, 0, sizeof(pml4_t));
 
-    // map all allocated RAM
     phys_addr_t ram_size = PFN_TO_PHYS(pmm_get_total_frames());
+
+    // 1. MUST MAP LOW MEMORY (keeps RIP at 0x101c8c alive after mov cr3!):
     vmm_map_range(kernel_pml4, 0x0, 0x0, ram_size, VMM_FLAG_WRITABLE);
 
-    vmm_switch_pml4(kernel_pml4);
-    pr_ok("VMM is initialized");
+    // 2. Map the Linux Direct Map (0xFFFF8000...):
+    vmm_map_range(kernel_pml4, DIRECT_MAP_OFFSET, 0x0, ram_size, VMM_FLAG_WRITABLE);
+
+    vmm_switch_pml4(pml4_phys);
+
+    // 3. Update pointer to use the direct map:
+    kernel_pml4 = (pml4_t *) PHYS_TO_VIRT_DIRECT(pml4_phys);
+    pr_ok("VMM is initialized with Linux Direct Map");
 }
 
 void vmm_test(void)
