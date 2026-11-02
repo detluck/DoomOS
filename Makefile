@@ -10,10 +10,13 @@ LDFLAGS = -n -T linker.ld --no-warn-rwx-segments
 BUILD_DIR = build
 ISO_DIR = $(BUILD_DIR)/isodir
 
+# Recursively find files: $(call rwildcard,directory,pattern)
+rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
+
 # Source files
 BOOT_ASM_SRC = boot/header.asm boot/boot.asm
 ARCH_ASM_SRC = $(wildcard kernel/arch/*.asm)
-C_SRC = $(shell find kernel -type f -name '*.c')
+C_SRC = $(call rwildcard,kernel,*.c)
 
 # Object files
 BOOT_ASM_OBJ = $(patsubst boot/%.asm, $(BUILD_DIR)/%.o, $(BOOT_ASM_SRC))
