@@ -33,6 +33,10 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
     kprintf("kprintf: free frames %lu / %lu\n", pmm_get_free_frames(), pmm_get_total_frames());
     kprintf("kprintf: kernel_main at %p\n", (void *) kernel_main);
 
+    /* QEMU CI smoke test: signal a successful boot via isa-debug-exit.
+       QEMU exits with (0x10 << 1) | 1 = 33. Without the device this is a no-op. */
+    outl(0xF4, 0x10);
+
     vga_set_color(VGA_COLOR_BLUE, VGA_COLOR_GREEN);
 
     vga_write("\nShutting down soons...\n");
