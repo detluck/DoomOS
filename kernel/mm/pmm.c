@@ -1,4 +1,5 @@
 #include "mm/pmm.h"
+#include "defs.h"
 #include "lib/assert.h"
 #include "lib/string.h"
 #include "mm/multiboot2.h"
@@ -66,8 +67,8 @@ static void pmm_set_start_free_frames(void)
 
         const struct multiboot_mmap_entry *entry = (const struct multiboot_mmap_entry *) ptr;
         if (entry->type == MULTIBOOT_MEMORY_AVAILABLE) {
-            pfn_t start_pfn = PHYS_TO_PFN(entry->addr);
-            pfn_t end_pfn = PHYS_TO_PFN(entry->addr + entry->len);
+            pfn_t start_pfn = PHYS_TO_PFN(ALIGN_UP(entry->addr, PAGE_SIZE));
+            pfn_t end_pfn = PHYS_TO_PFN(ALIGN_DOWN(entry->addr + entry->len, PAGE_SIZE));
 
             for (pfn_t pfn = start_pfn; pfn < end_pfn; pfn++) {
                 bitmap_clear(pfn);
@@ -83,8 +84,8 @@ static void pmm_reserve_range(phys_addr_t start, u64 size)
     if (size == 0) {
         return;
     }
-    pfn_t start_pfn = PHYS_TO_PFN(start);
-    pfn_t end_pfn = PHYS_TO_PFN(start + size + PAGE_SIZE - 1);
+    pfn_t start_pfn = PHYS_TO_PFN(ALIGN_DOWN(start, PAGE_SIZE));
+    pfn_t end_pfn = PHYS_TO_PFN(ALIGN_UP(start + size + PAGE_SIZE - 1, PAGE_SIZE));
 
     for (pfn_t pfn = start_pfn; pfn < end_pfn; pfn++) {
         if (pfn < total_frames) {

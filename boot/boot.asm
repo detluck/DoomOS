@@ -4,9 +4,7 @@ extern kernel_main
 ; Higher-half virtual base (-2 GiB)
 KERNEL_VIRT_BASE equ 0xFFFFFFFF80000000
 
-; ==============================================================================
-; Early Bootstrap BSS (Physical memory ~1 MiB)
-; ==============================================================================
+; Early Bootstrap BSS
 section .boot.bss nobits alloc write
 align 4096
 p4_table:
@@ -23,9 +21,7 @@ boot_stack_bottom:
     resb 4096          ; 4 KiB temporary stack for 32-bit bootstrap
 boot_stack_top:
 
-; ==============================================================================
-; Early Bootstrap Read-Only Data (Physical memory ~1 MiB)
-; ==============================================================================
+; Early Bootstrap Read-Only Data
 section .boot.rodata progbits alloc noexec
 align 8
 gdt64:
@@ -37,9 +33,7 @@ gdt64:
     dw $ - gdt64 - 1
     dd gdt64
 
-; ==============================================================================
 ; Early Bootstrap Code (Physical memory ~1 MiB, executed in 32-bit mode)
-; ==============================================================================
 section .boot.text progbits alloc exec
 bits 32
 start:
@@ -147,9 +141,7 @@ long_mode_trampoline:
     mov rax, higher_half_entry
     jmp rax
 
-; ==============================================================================
 ; Higher-Half Kernel Code & Stack (Virtual memory >= 0xFFFFFFFF80000000)
-; ==============================================================================
 section .bss
 align 16
 stack_bottom:

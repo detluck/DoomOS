@@ -4,7 +4,6 @@
 #include "mm/pmm.h"
 #include "types.h"
 #include "lib/assert.h"
-#include <stdbool.h>
 #define LOG_SCOPE "VMM"
 #include "lib/log.h"
 
