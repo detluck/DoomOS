@@ -71,8 +71,10 @@ static void pmm_set_start_free_frames(void)
             pfn_t end_pfn = PHYS_TO_PFN(ALIGN_DOWN(entry->addr + entry->len, PAGE_SIZE));
 
             for (pfn_t pfn = start_pfn; pfn < end_pfn; pfn++) {
-                bitmap_clear(pfn);
-                total_free_frames++;
+                if (bitmap_test(pfn)) {
+                    bitmap_clear(pfn);
+                    total_free_frames++;
+                }
             }
         }
         ptr += mmap->entry_size;
@@ -85,7 +87,7 @@ static void pmm_reserve_range(phys_addr_t start, u64 size)
         return;
     }
     pfn_t start_pfn = PHYS_TO_PFN(ALIGN_DOWN(start, PAGE_SIZE));
-    pfn_t end_pfn = PHYS_TO_PFN(ALIGN_UP(start + size + PAGE_SIZE - 1, PAGE_SIZE));
+    pfn_t end_pfn = PHYS_TO_PFN(ALIGN_UP(start + size, PAGE_SIZE));
 
     for (pfn_t pfn = start_pfn; pfn < end_pfn; pfn++) {
         if (pfn < total_frames) {
@@ -95,6 +97,28 @@ static void pmm_reserve_range(phys_addr_t start, u64 size)
             }
         }
     }
+}
+
+static phys_addr_t pmm_find_bitmap_location(phys_addr_t min, u64 size)
+{
+    const struct multiboot_tag_mmap *mmap = get_multiboot_mmap();
+    const u8 *end = (const u8 *) mmap + mmap->size;
+
+    for (const u8 *p = (const u8 *) mmap->entries; p < end; p += mmap->entry_size) {
+        const struct multiboot_mmap_entry *e = (const struct multiboot_mmap_entry *) p;
+        if (e->type != MULTIBOOT_MEMORY_AVAILABLE) {
+            continue;
+        }
+        phys_addr_t start = ALIGN_UP(e->addr > min ? e->addr : min, PAGE_SIZE);
+        phys_addr_t stop = e->addr + e->len;
+        if (stop > BOOT_DIRECT_MAP_SIZE) {
+            stop = BOOT_DIRECT_MAP_SIZE;
+        }
+        if (start < stop && stop - start >= size) {
+            return start;
+        }
+    }
+    return 0;
 }
 
 u64 pmm_get_total_frames(void)
@@ -122,12 +146,14 @@ void pmm_init(void)
     if (have_mb2 && mb2_phys + mb2_size > bm_start) {
         bm_start = mb2_phys + mb2_size;
     }
-    bitmap_phys = ALIGN_UP(bm_start, 8);
-    bitmap = (u64 *) PHYS_TO_VIRT_DIRECT(bitmap_phys);
-
-    // mark all frames as used
     const u64 bitmap_size_words = (total_frames + 63) / 64;
     const u64 bitmap_size_bytes = bitmap_size_words * sizeof(u64);
+    bitmap_phys = pmm_find_bitmap_location(bm_start, bitmap_size_bytes);
+    if (bitmap_phys == 0) {
+        panic("PMM: no usable memory for the frame bitmap");
+    }
+    bitmap = (u64 *) PHYS_TO_VIRT_DIRECT(bitmap_phys);
+    // mark all frames as used
     memset(bitmap, 0xFF, bitmap_size_bytes);
 
     // free every frame the memory map reports as available

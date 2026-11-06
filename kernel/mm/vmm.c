@@ -39,6 +39,11 @@ static page_table_t *get_or_create_table(page_table_t *table, size_t index, bool
     }
 }
 
+static bool is_active(const pml4_t *pml4)
+{
+    return VIRT_TO_PHYS_DIRECT(pml4) == vmm_read_cr3();
+}
+
 static pt_entry_t *get_pte(pml4_t *pml4, virt_addr_t vaddr, bool allocate, u64 flags)
 {
     size_t pml4_i = vmm_pml4_index(vaddr);
@@ -62,6 +67,16 @@ static pt_entry_t *get_pte(pml4_t *pml4, virt_addr_t vaddr, bool allocate, u64 f
 
 bool vmm_map_page(pml4_t *pml4, virt_addr_t vaddr, phys_addr_t paddr, u64 flags)
 {
+    if (!pml4) {
+        pr_err("PML4 cannot be NULL");
+        return false;
+    }
+
+    if (paddr & ~PTE_ADDR_MASK) {
+        pr_err("Invalid physical address");
+        return false;
+    }
+
     // check 4-Kib alignment
     if (vaddr & PAGE_OFFSET_MASK || paddr & PAGE_OFFSET_MASK) {
         pr_err("Addresses must be 4-Kib aligned");
@@ -75,7 +90,9 @@ bool vmm_map_page(pml4_t *pml4, virt_addr_t vaddr, phys_addr_t paddr, u64 flags)
 
     *pte = (paddr & PTE_ADDR_MASK) | flags | VMM_FLAG_PRESENT;
 
-    vmm_invlpg(vaddr);
+    if (is_active(pml4)) {
+        vmm_invlpg(vaddr);
+    }
     return true;
 }
 
@@ -97,7 +114,9 @@ void vmm_unmap_page(pml4_t *pml4, virt_addr_t vaddr)
         return;
     }
     *pte = 0;
-    vmm_invlpg(vaddr);
+    if (is_active(pml4)) {
+        vmm_invlpg(vaddr);
+    }
 }
 
 bool vmm_is_mapped(pml4_t *pml4, virt_addr_t vaddr)
@@ -131,7 +150,9 @@ void vmm_init(void)
     phys_addr_t ram_size = multiboot_get_max_phys();
 
     // Map Direct Map
-    vmm_map_range(kernel_pml4, DIRECT_MAP_OFFSET, 0x0, ram_size, VMM_FLAG_WRITABLE);
+    if (!vmm_map_range(kernel_pml4, DIRECT_MAP_OFFSET, 0x0, ram_size, VMM_FLAG_WRITABLE)) {
+        panic("VMM: direct map failed");
+    }
     // Map Higher-Half Kernel
     extern u8 _kernel_phys_end[];
     size_t kernel_size = ALIGN_UP((size_t) _kernel_phys_end, PAGE_SIZE);

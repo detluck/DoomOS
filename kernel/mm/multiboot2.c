@@ -14,17 +14,18 @@ bool multiboot_init(u64 magic, u64 info_adr)
         pr_err("Magic is not equal to multiboot2 specs");
         return false;
     }
-    const struct multiboot_info *info =
-        (const struct multiboot_info *) PHYS_TO_VIRT_DIRECT(info_adr);
-
-    if (info_adr == 0 || (info_adr & 7)) {
+    if (info_adr == 0 || (info_adr & 7) || info_adr + 8 > BOOT_DIRECT_MAP_SIZE) {
         pr_err("Invalid multiboot info address");
         return false;
     }
-    if (info->total_size < 16) {
-        pr_err("Size field in info struct < 16");
+    const struct multiboot_info *info =
+        (const struct multiboot_info *) PHYS_TO_VIRT_DIRECT(info_adr);
+
+    if (info->total_size < 16 || info_adr + info->total_size > BOOT_DIRECT_MAP_SIZE) {
+        pr_err("Multiboot info size invalid or outside boot direct map");
         return false;
     }
+
     if (info->reserved != 0) {
         pr_err("Reserved field is not 0");
         return false;
@@ -44,7 +45,12 @@ bool multiboot_init(u64 magic, u64 info_adr)
             break;
         }
         if (tag->type == MULTIBOOT_TAG_TYPE_MMAP) {
-            mmap_tag = (const struct multiboot_tag_mmap *) tag;
+            const struct multiboot_tag_mmap *m = (const struct multiboot_tag_mmap *) tag;
+            if (m->entry_size < sizeof(struct multiboot_mmap_entry)) {
+                pr_err("Invalid mmap entry_size");
+                return false;
+            }
+            mmap_tag = m;
         }
         if (tag->type == MULTIBOOT_TAG_TYPE_END) {
             break;
