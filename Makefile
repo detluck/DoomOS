@@ -3,9 +3,9 @@ LD = ld
 AS = nasm
 
 # Compiler flags for freestanding 64-bit kernel
-CFLAGS = -m64 -ffreestanding -fno-stack-protector -mno-red-zone -mgeneral-regs-only -Wall -Wextra -nostdlib -O2 -Ikernel/include
+CFLAGS = -m64 -ffreestanding -fno-stack-protector -mno-red-zone -mgeneral-regs-only -Wall -Wextra -nostdlib -O2 -mcmodel=kernel -fno-pie -fno-pic -Ikernel/include
 ASFLAGS = -f elf64
-LDFLAGS = -n -T linker.ld --no-warn-rwx-segments
+LDFLAGS = -n -T linker.ld --no-warn-rwx-segments -z max-page-size=0x1000
 
 BUILD_DIR = build
 ISO_DIR = $(BUILD_DIR)/isodir
