@@ -1,5 +1,7 @@
 #include "gdt.h"
 #include "defs.h"
+#include "arch/boot.h"
+#include "arch/cpu.h"
 #include "lib/assert.h"
 #include "types.h"
 
@@ -9,12 +11,8 @@
 #define GDT_ENTRY_COUNT 7
 #define GDT_SELECTOR_INDEX(selector) ((selector) >> 3)
 #define GDT_TSS_INDEX GDT_SELECTOR_INDEX(GDT_TSS_SELECTOR)
-#define GDT_TSS_LIMIT 103
 #define GDT_TSS_AVAILABLE 0x89
 #define GDT_TSS_BUSY 0x8B
-#define GDT_EARLY_MAPPING_START 0xFFFFFFFF80000000ULL
-#define GDT_EARLY_MAPPING_END (GDT_EARLY_MAPPING_START + 0x40000000ULL)
-#define RFLAGS_INTERRUPT_ENABLE (1ULL << 9)
 
 #define GDT_ACCESS_ACCESSED (1U << 0)
 #define GDT_ACCESS_READ_WRITE (1U << 1)
@@ -87,13 +85,6 @@ _Static_assert(GDT_TSS_INDEX + 1 < GDT_ENTRY_COUNT, "TSS requires two descriptor
 /* Internal assembly entry; upper bits of narrow arguments are unspecified. */
 void gdt_load(const gdt_pointer_t *pointer, u16 code_selector, u16 data_selector);
 
-static u64 read_rflags(void)
-{
-    u64 flags;
-    __asm__ volatile("pushfq; popq %0" : "=r"(flags) : : "memory");
-    return flags;
-}
-
 static gdt_pointer_t read_gdtr(void)
 {
     gdt_pointer_t pointer;
@@ -129,8 +120,8 @@ static u16 read_task_register(void)
 
 static void gdt_check_mapping(uintptr_t base, size_t size)
 {
-    if (base < GDT_EARLY_MAPPING_START || base >= GDT_EARLY_MAPPING_END ||
-        size > GDT_EARLY_MAPPING_END - base) {
+    if (base < EARLY_MAPPING_START || base >= EARLY_MAPPING_END ||
+        size > EARLY_MAPPING_END - base) {
         panic("GDT: required memory outside early identity mapping");
     }
 }
@@ -229,16 +220,18 @@ void gdt_init(void)
     pr_ok("GDT initialized and verified.");
 }
 
-void gdt_load_tss(uintptr_t base, u32 limit)
+void gdt_load_tss(tss_t *state)
 {
+    uintptr_t base = (uintptr_t) state;
+    u32 limit = sizeof(*state) - 1;
     if (tss_loaded) {
         panic("GDT: TSS already loaded");
     }
     if (read_rflags() & RFLAGS_INTERRUPT_ENABLE) {
         panic("GDT: interrupts must be disabled before loading TSS");
     }
-    if (base == 0 || limit != GDT_TSS_LIMIT) {
-        panic("GDT: invalid TSS base or limit");
+    if (state == NULL) {
+        panic("GDT: invalid TSS base");
     }
     gdt_check_mapping(base, (size_t) limit + 1);
     gdt_check_active();

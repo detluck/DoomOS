@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "tss.h"
 
 #define GDT_KERNEL_CODE_SELECTOR 0x08
 #define GDT_KERNEL_DATA_SELECTOR 0x10
@@ -14,4 +14,4 @@ void gdt_init(void);
 /* Requires the active kernel GDT, IF=0 and a prepared 104-byte TSS.
  * Installs its descriptor and loads TR once; base must be in the early mapping.
  */
-void gdt_load_tss(uintptr_t base, u32 limit);
+void gdt_load_tss(tss_t *state);

@@ -33,3 +33,5 @@
 
 #define ALIGN_UP(x, a) (((x) + (a) - 1) & ~((a) - 1))
 #define ALIGN_DOWN(x, a) ((x) & ~((a) - 1))
+/* Alignment must be a nonzero power of two; value is an integer. */
+#define IS_ALIGNED(value, alignment) (((value) & ((alignment) - 1)) == 0)
