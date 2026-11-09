@@ -38,8 +38,11 @@ void boot_init(void)
     pr_info("Found 128 MB RAM.");      // [INFO] [BOOT] Found 128 MB RAM.
     pr_warn("ACPI table missing.");    // [WARN] [BOOT] ACPI table missing.
     pr_err("Out of memory!");          // [ERR ] [BOOT] Out of memory!
+    pr_err("Failed with code %d", -5); // [ERR ] [BOOT] Failed with code -5
 }
 ```
+
+The message is a `printf`-style format string (see `lib/kprintf.h` for supported specifiers) and is truncated to 255 characters.
 
 Or call directly with an explicit scope:
 ```c

@@ -8,6 +8,22 @@
 #include "lib/assert.h"
 #include "lib/kprintf.h"
 
+static u8 ps2_read(void)
+{
+    while (!(inb(0x64) & 0x01))
+        ;
+    return inb(0x60);
+}
+
+static void print_scancode_set(void)
+{
+    outb(0x60, 0xF0);
+    ps2_read(); // ACK
+    outb(0x60, 0x00);
+    ps2_read(); // ACK
+    kprintf("scancode set reply: 0x%x\n", ps2_read());
+}
+
 void kernel_main(u64 magic, u64 mb2_info_adr)
 {
     vga_init();
@@ -32,6 +48,7 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
     kprintf("\nkprintf: %s %c %d %u %x %%\n", "hello", 'A', -42, 42u, 0xbeefu);
     kprintf("kprintf: free frames %lu / %lu\n", pmm_get_free_frames(), pmm_get_total_frames());
     kprintf("kprintf: kernel_main at %p\n", (void *) kernel_main);
+    print_scancode_set(); // returned 0x41 - set 2
 
     /* QEMU CI smoke test: signal a successful boot via isa-debug-exit.
        QEMU exits with (0x10 << 1) | 1 = 33. Without the device this is a no-op. */
