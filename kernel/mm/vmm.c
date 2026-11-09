@@ -1,4 +1,5 @@
 #include "mm/vmm.h"
+#include "arch/boot.h"
 #include "lib/string.h"
 #include "mm/multiboot2.h"
 #include "mm/pmm.h"

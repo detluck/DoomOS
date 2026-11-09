@@ -6,13 +6,6 @@
 #define PAGE_TABLE_ENTRIES 512
 #define PAGE_OFFSET_MASK (PAGE_SIZE - 1)
 #define PTE_ADDR_MASK 0x000FFFFFFFFFF000ULL
-#define DIRECT_MAP_OFFSET 0xFFFF800000000000ULL
-#define KERNEL_VIRT_OFFSET 0xFFFFFFFF80000000ULL
-#define BOOT_DIRECT_MAP_SIZE (1ULL << 30)
-
-// macros for kernel memory only
-#define VIRT_TO_PHYS_DIRECT(vaddr) ((phys_addr_t) (vaddr) - DIRECT_MAP_OFFSET)
-#define PHYS_TO_VIRT_DIRECT(paddr) ((virt_addr_t) (paddr) + DIRECT_MAP_OFFSET)
 
 // avl flags macro
 #define VMM_AVL_SHIFT 9

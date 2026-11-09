@@ -120,8 +120,8 @@ static u16 read_task_register(void)
 
 static void gdt_check_mapping(uintptr_t base, size_t size)
 {
-    if (base < EARLY_MAPPING_START || base >= EARLY_MAPPING_END ||
-        size > EARLY_MAPPING_END - base) {
+    if (base < EARLY_KERNEL_MAP_START || base >= EARLY_KERNEL_MAP_END ||
+        size > EARLY_KERNEL_MAP_END - base) {
         panic("GDT: required memory outside early identity mapping");
     }
 }

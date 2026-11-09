@@ -3,7 +3,7 @@
 #include "lib/assert.h"
 #include "lib/string.h"
 #include "mm/multiboot2.h"
-#include "mm/vmm.h"
+#include "arch/boot.h"
 #include "types.h"
 
 #define LOG_SCOPE "PMM"
@@ -111,8 +111,8 @@ static phys_addr_t pmm_find_bitmap_location(phys_addr_t min, u64 size)
         }
         phys_addr_t start = ALIGN_UP(e->addr > min ? e->addr : min, PAGE_SIZE);
         phys_addr_t stop = e->addr + e->len;
-        if (stop > BOOT_DIRECT_MAP_SIZE) {
-            stop = BOOT_DIRECT_MAP_SIZE;
+        if (stop > EARLY_MAP_SIZE) {
+            stop = EARLY_MAP_SIZE;
         }
         if (start < stop && stop - start >= size) {
             return start;

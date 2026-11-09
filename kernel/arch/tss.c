@@ -26,8 +26,8 @@ static bool initialized;
 
 static void tss_check_region(uintptr_t base, size_t size)
 {
-    if (base < EARLY_MAPPING_START || base >= EARLY_MAPPING_END ||
-        size > EARLY_MAPPING_END - base) {
+    if (base < EARLY_KERNEL_MAP_START || base >= EARLY_KERNEL_MAP_END ||
+        size > EARLY_KERNEL_MAP_END - base) {
         panic("TSS: required memory outside early identity mapping");
     }
 
