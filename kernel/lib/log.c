@@ -27,6 +27,7 @@ static void log_emit(u8 badge_color, const char *badge, u8 msg_color, const char
     vga_set_color(msg_color, VGA_COLOR_BLACK);
     vga_write(buf);
     vga_write("\n");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
 }
 
 void log_info(const char *scope, const char *fmt, ...)
