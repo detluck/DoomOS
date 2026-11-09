@@ -1,6 +1,7 @@
 -m64
 -ffreestanding
 -fno-stack-protector
+-fno-builtin-memset
 -mno-red-zone
 -Wall
 -Wextra

@@ -8,7 +8,8 @@
 
 #define GDT_ENTRY_COUNT 5
 #define GDT_SELECTOR_INDEX(selector) ((selector) >> 3)
-#define GDT_EARLY_MAPPING_END 0x200000ULL
+#define GDT_EARLY_MAPPING_START 0xFFFFFFFF80000000ULL
+#define GDT_EARLY_MAPPING_END (GDT_EARLY_MAPPING_START + 0x40000000ULL)
 #define RFLAGS_INTERRUPT_ENABLE (1ULL << 9)
 
 #define GDT_ACCESS_ACCESSED (1U << 0)
@@ -108,7 +109,8 @@ static segment_selectors_t read_segment_selectors(void)
 
 static void gdt_check_mapping(uintptr_t base, size_t size)
 {
-    if (base >= GDT_EARLY_MAPPING_END || size > GDT_EARLY_MAPPING_END - base) {
+    if (base < GDT_EARLY_MAPPING_START || base >= GDT_EARLY_MAPPING_END ||
+        size > GDT_EARLY_MAPPING_END - base) {
         panic("GDT: required memory outside early identity mapping");
     }
 }

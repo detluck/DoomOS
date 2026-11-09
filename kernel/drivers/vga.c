@@ -51,6 +51,9 @@ void vga_set_color(u8 fg, u8 bg)
 
 void vga_set_cursor_pos(size_t row, size_t col)
 {
+    if (row >= VGA_HEIGHT || col >= VGA_WIDTH) {
+        return;
+    }
     cursor_row = row;
     cursor_col = col;
     update_hardware_cursor();

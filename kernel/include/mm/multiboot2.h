@@ -88,6 +88,8 @@ struct multiboot_tag_mmap {
 
 bool multiboot_init(u64 magic, u64 info_adr);
 
+bool multiboot_get_bounds(phys_addr_t *phys_start, u64 *size);
+u64 multiboot_get_max_phys(void);
 const struct multiboot_tag_mmap *get_multiboot_mmap(void);
 
 void print_multiboot_mmap(void);

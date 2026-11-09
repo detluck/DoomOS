@@ -3,17 +3,20 @@ LD = ld
 AS = nasm
 
 # Compiler flags for freestanding 64-bit kernel
-CFLAGS = -m64 -ffreestanding -fno-stack-protector -mno-red-zone -mgeneral-regs-only -Wall -Wextra -nostdlib -O2 -Ikernel/include
+CFLAGS = -m64 -ffreestanding -fno-stack-protector -mno-red-zone -mgeneral-regs-only -Wall -Wextra -nostdlib -O2 -mcmodel=kernel -fno-pie -fno-pic -Ikernel/include
 ASFLAGS = -f elf64
-LDFLAGS = -n -T linker.ld --no-warn-rwx-segments
+LDFLAGS = -n -T linker.ld --no-warn-rwx-segments -z max-page-size=0x1000
 
 BUILD_DIR = build
 ISO_DIR = $(BUILD_DIR)/isodir
 
+# Recursively find files: $(call rwildcard,directory,pattern)
+rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
+
 # Source files
 BOOT_ASM_SRC = boot/header.asm boot/boot.asm
 ARCH_ASM_SRC = $(wildcard kernel/arch/*.asm)
-C_SRC = $(shell find kernel -type f -name '*.c')
+C_SRC = $(call rwildcard,kernel,*.c)
 
 # Object files
 BOOT_ASM_OBJ = $(patsubst boot/%.asm, $(BUILD_DIR)/%.o, $(BOOT_ASM_SRC))
@@ -84,13 +87,18 @@ format-check:
 
 # Static analysis
 lint:
-	cppcheck --enable=warning,style,performance,portability \
+	cppcheck --enable=all \
+	         --inconclusive \
+	         --check-level=exhaustive \
+	         --std=c11 \
 	         --error-exitcode=1 \
 	         --inline-suppr \
 	         --suppress=missingIncludeSystem \
 	         --suppress=unusedFunction \
+	         --suppress=staticFunction \
+	         --suppress=checkersReport \
+					 --suppress=unmatchedSuppression \
 	         -Ikernel/include \
 	         kernel/
-
 clean:
 	rm -rf $(BUILD_DIR)

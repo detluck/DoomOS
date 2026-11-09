@@ -5,6 +5,7 @@
 #define PAGE_SHIFT 12
 #define PAGE_SIZE (1UL << PAGE_SHIFT) // 4 KiB
 #define PAGE_MASK (~(PAGE_SIZE - 1))
+#define PAGE_OFFSET_MASK (PAGE_SIZE - 1)
 #define PFN_TO_PHYS(pfn) ((phys_addr_t) (pfn) << PAGE_SHIFT)
 #define PHYS_TO_PFN(phys) ((pfn_t) (phys) >> PAGE_SHIFT)
 

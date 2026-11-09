@@ -26,3 +26,10 @@
 
 // Forces a variable or struct to align to a byte boundary
 #define __aligned(n) __attribute__((aligned(n)))
+
+/*
+ *  Memory manipulation
+ */
+
+#define ALIGN_UP(x, a) (((x) + (a) - 1) & ~((a) - 1))
+#define ALIGN_DOWN(x, a) ((x) & ~((a) - 1))

@@ -2,11 +2,17 @@
 #include "types.h"
 #include "defs.h"
 #include "mm/pmm.h"
-#include <stddef.h>
 
 #define PAGE_TABLE_ENTRIES 512
 #define PAGE_OFFSET_MASK (PAGE_SIZE - 1)
 #define PTE_ADDR_MASK 0x000FFFFFFFFFF000ULL
+#define DIRECT_MAP_OFFSET 0xFFFF800000000000ULL
+#define KERNEL_VIRT_OFFSET 0xFFFFFFFF80000000ULL
+#define BOOT_DIRECT_MAP_SIZE (1ULL << 30)
+
+// macros for kernel memory only
+#define VIRT_TO_PHYS_DIRECT(vaddr) ((phys_addr_t) (vaddr) - DIRECT_MAP_OFFSET)
+#define PHYS_TO_VIRT_DIRECT(paddr) ((virt_addr_t) (paddr) + DIRECT_MAP_OFFSET)
 
 // avl flags macro
 #define VMM_AVL_SHIFT 9
@@ -67,9 +73,16 @@ static __always_inline void vmm_invlpg(virt_addr_t vaddr)
     __asm__ volatile("invlpg (%0)" : : "r"(vaddr) : "memory");
 }
 
-static __always_inline void vmm_switch_pml4(const pml4_t *pml4)
+static __always_inline void vmm_switch_pml4(phys_addr_t paddr)
 {
-    __asm__ volatile("mov %0, %%cr3" : : "r"((phys_addr_t) pml4) : "memory");
+    __asm__ volatile("mov %0, %%cr3" : : "r"(paddr) : "memory");
+}
+
+static __always_inline u64 vmm_read_cr3(void)
+{
+    u64 v;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(v));
+    return v & PTE_ADDR_MASK; // drop PCID / flag bits
 }
 
 void vmm_init(void);
