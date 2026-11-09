@@ -17,6 +17,8 @@
  *    pr_warn("ACPI table missing.");      // [WARN] [BOOT] ACPI table missing.
  *    pr_err("Out of memory!");            // [ERR ] [BOOT] Out of memory!
  *
+ *    pr_err("Failed with code %d", err);  // [ERR ] [BOOT] Failed with code -5
+ *
  * 3. Alternatively, call the functions directly with an explicit scope:
  *
  *    log_info("PMM", "Page allocator initialized.");
@@ -24,16 +26,17 @@
 
 #pragma once
 
-void log_ok(const char *scope, const char *msg);
-void log_info(const char *scope, const char *msg);
-void log_warn(const char *scope, const char *msg);
-void log_error(const char *scope, const char *msg);
+// The message is a printf-style format (see lib/kprintf.h), truncated to 255 chars.
+void log_ok(const char *scope, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+void log_info(const char *scope, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+void log_warn(const char *scope, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+void log_error(const char *scope, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
 #ifndef LOG_SCOPE
 #define LOG_SCOPE "KERNEL"
 #endif
 
-#define pr_ok(msg) log_ok(LOG_SCOPE, msg)
-#define pr_info(msg) log_info(LOG_SCOPE, msg)
-#define pr_warn(msg) log_warn(LOG_SCOPE, msg)
-#define pr_err(msg) log_error(LOG_SCOPE, msg)
+#define pr_ok(...) log_ok(LOG_SCOPE, __VA_ARGS__)
+#define pr_info(...) log_info(LOG_SCOPE, __VA_ARGS__)
+#define pr_warn(...) log_warn(LOG_SCOPE, __VA_ARGS__)
+#define pr_err(...) log_error(LOG_SCOPE, __VA_ARGS__)

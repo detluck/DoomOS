@@ -72,8 +72,13 @@ test:
 	@mkdir -p $(BUILD_DIR)
 	$(HOST_CC) -Wall -Wextra -fno-builtin -Ikernel/include tests/test_string.c kernel/lib/string.c -o $(BUILD_DIR)/test_string
 	./$(BUILD_DIR)/test_string
+	$(HOST_CC) -Wall -Wextra -fno-builtin -Ikernel/include tests/test_vsnprintf.c kernel/lib/vsnprintf.c -o $(BUILD_DIR)/test_vsnprintf
+	./$(BUILD_DIR)/test_vsnprintf
 	$(HOST_CC) -Wall -Wextra -Ikernel/include tests/test_pmm.c -o $(BUILD_DIR)/test_pmm
 	./$(BUILD_DIR)/test_pmm
+	$(HOST_CC) -Wall -Wextra -std=gnu11 -g -fsanitize=address,undefined -Ikernel/include tests/test_list.c -o $(BUILD_DIR)/test_list
+	./$(BUILD_DIR)/test_list
+
 
 # Code formatting (in-place)
 format:
