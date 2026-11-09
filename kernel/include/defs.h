@@ -37,5 +37,16 @@
 
 #define ALIGN_UP(x, a) (((x) + (a) - 1) & ~((a) - 1))
 #define ALIGN_DOWN(x, a) ((x) & ~((a) - 1))
+
+/*
+ * Utility macros
+ */
+
+#define container_of(ptr, type, member) \
+    ({ \
+        const typeof(((type *) 0)->member) *__mptr = (ptr); \
+        (type *) ((char *) __mptr - offsetof(type, member)); \
+    })
+
 /* Alignment must be a nonzero power of two; value is an integer. */
 #define IS_ALIGNED(value, alignment) (((value) & ((alignment) - 1)) == 0)
