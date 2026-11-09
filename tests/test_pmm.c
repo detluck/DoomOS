@@ -3,7 +3,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 
 static void test_pmm_constants_and_macros(void)
 {

@@ -76,6 +76,9 @@ test:
 	./$(BUILD_DIR)/test_vsnprintf
 	$(HOST_CC) -Wall -Wextra -Ikernel/include tests/test_pmm.c -o $(BUILD_DIR)/test_pmm
 	./$(BUILD_DIR)/test_pmm
+	$(HOST_CC) -Wall -Wextra -std=gnu11 -g -fsanitize=address,undefined -Ikernel/include tests/test_list.c -o $(BUILD_DIR)/test_list
+	./$(BUILD_DIR)/test_list
+
 
 # Code formatting (in-place)
 format:
