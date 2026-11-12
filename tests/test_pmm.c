@@ -1,8 +1,7 @@
 #include "mm/pmm.h"
-#include <assert.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
+#include "types.h"
+#include "lib/kprintf.h"
+#include "lib/assert.h"
 
 static void test_pmm_constants_and_macros(void)
 {
@@ -27,7 +26,7 @@ static void test_pmm_constants_and_macros(void)
     assert(PHYS_TO_PFN(0x100000) == 256);
     assert(PHYS_TO_PFN(0x8000000) == 32768);
 
-    printf("[PASS] pmm_constants_and_macros\n");
+    kprintf("[PASS] pmm_constants_and_macros\n");
 }
 
 static void test_bitmap_word_calculations(void)
@@ -47,7 +46,7 @@ static void test_bitmap_word_calculations(void)
     assert(words == 512);
     assert(bytes == 4096);
 
-    printf("[PASS] bitmap_word_calculations\n");
+    kprintf("[PASS] bitmap_word_calculations\n");
 }
 
 static void test_bitmap_bitwise_operations(void)
@@ -112,15 +111,35 @@ static void test_bitmap_bitwise_operations(void)
 #undef MOCK_CLEAR
 #undef MOCK_TEST
 
-    printf("[PASS] bitmap_bitwise_operations\n");
+    kprintf("[PASS] bitmap_bitwise_operations\n");
 }
 
-int main(void)
+static void test_real_pmm_word_boundary(void)
 {
-    printf("--- Running PMM Unit Tests ---\n");
+    uint64_t initial_free = pmm_get_free_frames();
+
+    // Allocate 65 frames.
+    // This forces the PMM to cross from bit 63 (end of one u64)
+    // to bit 64 (start of the next u64) in the real hardware bitmap!
+    phys_addr_t block = pmm_alloc_frames(65);
+
+    assert(block != 0);
+    assert(pmm_get_free_frames() == initial_free - 65);
+
+    // Free them, which tests if pmm_free_frames loops over the boundary correctly
+    pmm_free_frames(block, 65);
+
+    assert(pmm_get_free_frames() == initial_free);
+
+    kprintf("[PASS] real_pmm_word_boundary\n");
+}
+
+void run_pmm_tests()
+{
+    kprintf("--- Running PMM Unit Tests ---\n");
     test_pmm_constants_and_macros();
     test_bitmap_word_calculations();
     test_bitmap_bitwise_operations();
-    printf("--- All PMM Unit Tests Passed! ---\n");
-    return 0;
+    test_real_pmm_word_boundary();
+    kprintf("--- All PMM Unit Tests Passed! ---\n");
 }

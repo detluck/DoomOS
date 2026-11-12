@@ -6,8 +6,12 @@
 #include "arch/io.h"
 #include "mm/multiboot2.h"
 #include "mm/pmm.h"
+#include "mm/heap.h"
 #include "lib/assert.h"
 #include "lib/kprintf.h"
+
+extern void run_heap_tests(void);
+extern void run_pmm_tests(void);
 
 static u8 ps2_read(void)
 {
@@ -45,6 +49,26 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
     pmm_test();
     vmm_init();
     vmm_test();
+    kmalloc_init();
+
+// internal tests
+#ifdef RUN_TESTS
+    vga_set_color(VGA_COLOR_YELLOW, VGA_COLOR_BLACK);
+    vga_write("\n--- RUNNING IN-KERNEL TESTS ---\n");
+
+    run_pmm_tests();
+    run_heap_tests();
+
+    vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
+    vga_write("--- ALL TESTS PASSED! ---\n");
+
+    /* Automatically shut down QEMU when tests succeed */
+    outw(0x604, 0x2000);
+
+    while (1)
+        __asm__ volatile("hlt");
+#endif
+
     // kprintf examples
     vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     kprintf("\nkprintf: %s %c %d %u %x %%\n", "hello", 'A', -42, 42u, 0xbeefu);

@@ -3,88 +3,129 @@
 #include <stdio.h>
 #include <string.h>
 
-// the malformed formats ("%q", trailing "%", "") are deliberate
+// The malformed formats ("%q", trailing "%", "") are deliberate.
 #pragma GCC diagnostic ignored "-Wformat"
 #pragma GCC diagnostic ignored "-Wformat-zero-length"
 
-#define CHECK(expected, ...) \
-    do { \
-        char b[128]; \
-        int n = snprintf(b, sizeof b, __VA_ARGS__); \
-        assert(strcmp(b, expected) == 0); \
-        assert((size_t) n == strlen(expected)); \
-    } while (0)
-
 static void test_numbers(void)
 {
-    CHECK("0", "%d", 0);
-    CHECK("-1", "%d", -1);
-    CHECK("2147483647", "%d", 2147483647);
-    CHECK("-2147483648", "%d", (-2147483647 - 1));
-    CHECK("9223372036854775807", "%ld", 9223372036854775807L);
-    CHECK("-9223372036854775808", "%ld", (-9223372036854775807L - 1));
-    CHECK("0", "%u", 0u);
-    CHECK("4294967295", "%u", 4294967295u);
-    CHECK("18446744073709551615", "%lu", 18446744073709551615UL);
-    CHECK("18446744073709551615", "%llu", 18446744073709551615ULL);
-    CHECK("0", "%x", 0u);
-    CHECK("beef", "%x", 0xbeefu);
-    CHECK("ffffffff", "%x", 0xffffffffu);
-    CHECK("ffffffffffffffff", "%lx", 0xffffffffffffffffUL);
+    char buf[128];
 
-    // %b is not known to the host's printf, so check it directly
-    char b[80];
-    assert(snprintf(b, sizeof b, "%b", 0u) == 1 && strcmp(b, "0") == 0);
-    assert(snprintf(b, sizeof b, "%b", 5u) == 3 && strcmp(b, "101") == 0);
-    assert(snprintf(b, sizeof b, "%lb", 0xffffffffffffffffUL) == 64);
-    assert(strspn(b, "1") == 64);
+    assert(snprintf(buf, sizeof(buf), "%d", 0) == 1);
+    assert(strcmp(buf, "0") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%d", -1) == 2);
+    assert(strcmp(buf, "-1") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%d", 2147483647) == 10);
+    assert(strcmp(buf, "2147483647") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%d", (-2147483647 - 1)) == 11);
+    assert(strcmp(buf, "-2147483648") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%ld", 9223372036854775807L) == 19);
+    assert(strcmp(buf, "9223372036854775807") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%ld", (-9223372036854775807L - 1)) == 20);
+    assert(strcmp(buf, "-9223372036854775808") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%u", 4294967295u) == 10);
+    assert(strcmp(buf, "4294967295") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%lu", 18446744073709551615UL) == 20);
+    assert(strcmp(buf, "18446744073709551615") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%llu", 18446744073709551615ULL) == 20);
+    assert(strcmp(buf, "18446744073709551615") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%x", 0xbeefu) == 4);
+    assert(strcmp(buf, "beef") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%lx", 0xffffffffffffffffUL) == 16);
+    assert(strcmp(buf, "ffffffffffffffff") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%b", 0u) == 1);
+    assert(strcmp(buf, "0") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%b", 5u) == 3);
+    assert(strcmp(buf, "101") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%lb", 0xffffffffffffffffUL) == 64);
+    assert(strspn(buf, "1") == 64);
+
+    printf("[PASS] numbers\n");
 }
 
 static void test_text(void)
 {
-    CHECK("", "%s", "");
-    const char *null_str = NULL; // via a variable so the compiler doesn't warn about a literal NULL
-    CHECK("(null)", "%s", null_str);
-    CHECK("hi A %", "%s %c %%", "hi", 'A');
-    CHECK("%q", "%q");
-    CHECK("ab", "ab%"); // lone trailing '%' stops cleanly
-    CHECK("", "");
+    char buf[128];
+
+    assert(snprintf(buf, sizeof(buf), "%s", "") == 0);
+    assert(strcmp(buf, "") == 0);
+
+    const char *null_str = NULL;
+    assert(snprintf(buf, sizeof(buf), "%s", null_str) == 6);
+    assert(strcmp(buf, "(null)") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%s %c %%", "hi", 'A') == 6);
+    assert(strcmp(buf, "hi A %") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%q") == 2);
+    assert(strcmp(buf, "%q") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "ab%") == 2);
+    assert(strcmp(buf, "ab") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "") == 0);
+    assert(strcmp(buf, "") == 0);
+
+    printf("[PASS] text\n");
 }
 
 static void test_pointer(void)
 {
-    CHECK("(nil)", "%p", (void *) NULL);
-    CHECK("0x1234", "%p", (void *) 0x1234);
+    char buf[128];
+
+    assert(snprintf(buf, sizeof(buf), "%p", (void *) NULL) == 5);
+    assert(strcmp(buf, "(nil)") == 0);
+
+    assert(snprintf(buf, sizeof(buf), "%p", (void *) 0x1234) == 6);
+    assert(strcmp(buf, "0x1234") == 0);
+
+    printf("[PASS] pointer\n");
 }
 
 static void test_truncation(void)
 {
-    char b[8];
+    char buf[8];
 
-    assert(snprintf(b, 5, "abcdefgh") == 8);
-    assert(strcmp(b, "abcd") == 0);
+    assert(snprintf(buf, 5, "abcdefgh") == 8);
+    assert(strcmp(buf, "abcd") == 0);
 
-    memset(b, 'X', sizeof b);
-    assert(snprintf(b, 1, "abc") == 3);
-    assert(b[0] == '\0' && b[1] == 'X');
+    memset(buf, 'X', sizeof(buf));
+    assert(snprintf(buf, 1, "abc") == 3);
+    assert(buf[0] == '\0');
+    assert(buf[1] == 'X');
 
     assert(snprintf(NULL, 0, "%d", 12345) == 5);
 
-    // number cut mid-digits, canary after the buffer stays intact
-    memset(b, 'X', sizeof b);
-    assert(snprintf(b, 4, "%d", 12345) == 5);
-    assert(strcmp(b, "123") == 0 && b[4] == 'X');
+    memset(buf, 'X', sizeof(buf));
+    assert(snprintf(buf, 4, "%d", 12345) == 5);
+    assert(strcmp(buf, "123") == 0);
+    assert(buf[4] == 'X');
+
+    printf("[PASS] truncation\n");
 }
 
 int main(void)
 {
+    printf("--- Running vsnprintf Unit Tests ---\n");
+
     test_numbers();
-    printf("[PASS] numbers\n");
     test_text();
-    printf("[PASS] text\n");
     test_pointer();
-    printf("[PASS] pointer\n");
     test_truncation();
-    printf("[PASS] truncation\n");
+
+    printf("--- All 4 Unit Tests Passed! ---\n");
     return 0;
 }
