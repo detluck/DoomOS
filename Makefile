@@ -41,7 +41,7 @@ KERNEL_ISO = $(BUILD_DIR)/kernel.iso
 
 HOST_CC ?= gcc
 
-.PHONY: all run run-iso iso clean test host-test format format-check lint
+.PHONY: all run run-iso iso clean test host-test test-kernel run-tests debug-tests format format-check lint
 
 all: $(KERNEL_BIN)
 
@@ -78,10 +78,6 @@ run: iso
 run-iso: run
 
 # Host unit tests
-HOST_TESTS = string list vsnprintf
-HOST_TEST_BIN = $(addprefix $(BUILD_DIR)/host_test_, $(HOST_TESTS))
-
-HOST_CC ?= gcc
 HOST_TEST_CFLAGS = -Wall -Wextra -fno-builtin -Ikernel/include \
                    -Wno-memset-transposed-args \
                    -Wno-stringop-truncation \
@@ -110,7 +106,7 @@ $(BUILD_DIR)/tests/%.o: tests/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Run all host tests
-host-test: $(HOST_TEST_BIN)
+test-host: $(HOST_TEST_BIN)
 	@for test in $(HOST_TEST_BIN); do \
 		printf "\nRunning %s...\n" "$$test"; \
 		if ./$$test; then \
@@ -123,15 +119,34 @@ host-test: $(HOST_TEST_BIN)
 	done
 	@printf '\n\033[0;32mAll host tests passed!\033[0m\n'
 
-test:
-	@echo "\n Building kernel level tests"
-	$(MAKE) host-test
+# Run everything: host unit tests first, then headless kernel tests in QEMU
+test: test-host test-kernel
 
-	$(MAKE) clean
-	$(MAKE) iso RUN_TESTS=1
+# Headless kernel-level tests (CI): expects QEMU exit code 33 (isa-debug-exit 0x10)
+test-kernel:
+	$(MAKE) BUILD_DIR=build-test iso RUN_TESTS=1
+	timeout 60s qemu-system-x86_64 -cdrom build-test/kernel.iso -display none -no-reboot \
+		-device isa-debug-exit,iobase=0xf4,iosize=0x04 \
+		-d int,cpu_reset -D build-test/qemu.log; \
+	status=$$?; \
+	if [ $$status -ne 33 ]; then \
+		printf '\033[0;31m[FAIL] Kernel tests failed (QEMU exit code %s, expected 33)\033[0m\n' "$$status"; \
+		tail -40 build-test/qemu.log; \
+		exit 1; \
+	fi; \
+	printf '\033[0;32m[PASS] Kernel tests passed!\033[0m\n'
 
-	@echo "\nStarting QEMU..."
-	qemu-system-x86_64 -cdrom $(KERNEL_ISO)
+# Show the kernel tests in a QEMU window (VGA output visible), VM stays up after a crash
+run-tests:
+	$(MAKE) BUILD_DIR=build-test iso RUN_TESTS=1
+	qemu-system-x86_64 -cdrom build-test/kernel.iso -no-reboot -no-shutdown
+
+# Same build, headless, writes a CPU exception log and prints the first entries
+debug-tests:
+	$(MAKE) BUILD_DIR=build-test iso RUN_TESTS=1
+	-timeout 20s qemu-system-x86_64 -cdrom build-test/kernel.iso -display none -no-reboot \
+		-no-shutdown -d int,cpu_reset -D build-test/qemu.log
+	@tail -40 build-test/qemu.log
 
 # Code formatting (in-place)
 format:
@@ -158,4 +173,4 @@ lint:
 	         kernel/
 
 clean:
-	rm -rf $(BUILD_DIR)
+	rm -rf $(BUILD_DIR) build-test

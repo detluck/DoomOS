@@ -63,7 +63,7 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
     vga_write("--- ALL TESTS PASSED! ---\n");
 
     /* Automatically shut down QEMU when tests succeed */
-    outw(0x604, 0x2000);
+    outw(0xF4, 0x10);
 
     while (1)
         __asm__ volatile("hlt");

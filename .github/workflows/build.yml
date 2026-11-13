@@ -8,6 +8,7 @@ jobs:
   code-quality:
     name: Code Quality & Style
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -17,15 +18,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang-format cppcheck
 
-      - name: Check code formatting (clang-format)
+      - name: Check code formatting
         run: make format-check
 
-      - name: Static analysis (cppcheck)
+      - name: Static analysis
         run: make lint
 
   build-and-test:
     name: Build & Test (${{ matrix.compiler }})
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         compiler: [gcc, clang]
@@ -37,36 +39,45 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm xorriso mtools dosfstools grub-pc-bin grub-common qemu-system-x86
+          sudo apt-get install -y \
+            gcc clang \
+            nasm xorriso mtools dosfstools \
+            grub-pc-bin grub-common \
+            qemu-system-x86
 
-      - name: Run host-side unit tests
-        run: make test HOST_CC=${{ matrix.compiler }}
+      - name: Build regular kernel ISO
+        run: make BUILD_DIR=build-smoke iso CC=${{ matrix.compiler }}
 
-      - name: Build kernel
+      - name: Boot kernel in QEMU (headless)
+        shell: bash
         run: |
-          make clean
-          make CC=${{ matrix.compiler }}
+          timeout --signal=TERM --kill-after=5s 10s \
+            qemu-system-x86_64 \
+              -cdrom build-smoke/kernel.iso \
+              -display none \
+              -serial none \
+              -monitor none \
+              -no-reboot \
+              -d int,cpu_reset \
+              -D build-smoke/qemu.log
 
-      - name: Build bootable ISO
-        run: make iso
+          status=$?
 
-      - name: Headless QEMU boot test
-        run: |
-          # The kernel writes to isa-debug-exit after boot init. QEMU exits with
-          # (0x10 << 1) | 1 = 33 on success. Anything else is a failed boot.
-          EXIT_CODE=0
-          timeout 30s qemu-system-x86_64 -cdrom build/kernel.iso -display none \
-            -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
-            -no-reboot || EXIT_CODE=$?
-          if [ "$EXIT_CODE" -ne 33 ]; then
-            echo "QEMU failed with exit code $EXIT_CODE (expected 33)"
+          if [ "$status" -ne 124 ]; then
+            echo "::error::QEMU exited unexpectedly (exit code: $status)"
+            tail -40 build-smoke/qemu.log
             exit 1
           fi
-          echo "QEMU boot test passed (isa-debug-exit 33)."
+
+          echo "Kernel remained running for 10 seconds."
+
+      - name: Run host and kernel tests
+        run: make test CC=${{ matrix.compiler }} HOST_CC=${{ matrix.compiler }}
 
       - name: Upload bootable ISO artifact
         if: matrix.compiler == 'gcc'
         uses: actions/upload-artifact@v4
         with:
-          name: x86-64-kernel-iso
-          path: build/kernel.iso
+          name: x86-64-kernel-test-iso
+          path: build-test/kernel.iso
+          if-no-files-found: error

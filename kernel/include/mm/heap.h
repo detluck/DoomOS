@@ -24,7 +24,7 @@ void *kzalloc(size_t size);
 void kfree(void *ptr);
 
 // get allocation size
-size_t ksize(void *ptr);
+size_t ksize(const void *ptr);
 
 // heap statistics
 void kheap_dump_stats(void);

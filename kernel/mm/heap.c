@@ -39,7 +39,7 @@ static void *page_alloc(void)
     return (void *) PHYS_TO_VIRT_DIRECT(phys);
 }
 
-static void page_free(void *page)
+static void page_free(const void *page)
 {
     pmm_free_frame(VIRT_TO_PHYS_DIRECT(page));
 }
@@ -58,12 +58,12 @@ static u32 get_obj_per_slab(size_t obj_size, size_t align)
     return (PAGE_SIZE - first) / obj_size;
 }
 
-static struct slab *obj_to_slab(void *obj)
+static struct slab *obj_to_slab(const void *obj)
 {
     return (struct slab *) ALIGN_DOWN((u64) obj, PAGE_SIZE);
 }
 
-static size_t get_free_obj(struct slab_cache *cache, struct slab *slab)
+static size_t get_free_obj(const struct slab_cache *cache, const struct slab *slab)
 {
     return cache->obj_per_slab - slab->in_use;
 }
@@ -73,7 +73,7 @@ static bool is_large_page_start(const void *ptr, const struct large_hdr *h)
     return (const u8 *) ptr == (const u8 *) h + sizeof(struct large_hdr);
 }
 
-static u64 *get_page(void *ptr)
+static u64 *get_page(const void *ptr)
 {
 
     return (u64 *) ALIGN_DOWN((virt_addr_t) ptr, PAGE_SIZE);
@@ -104,12 +104,12 @@ static struct slab_cache *get_cache_for_size(size_t size)
     return NULL;
 }
 
-static bool slab_ptr_is_slot(struct slab *s, void *ptr)
+static bool slab_ptr_is_slot(const struct slab *s, const void *ptr)
 {
     if (s->magic != SLAB_MAGIC || !s->cache)
         return false;
 
-    struct slab_cache *c = s->cache;
+    const struct slab_cache *c = s->cache;
 
     uintptr_t first = (uintptr_t) s + ALIGN_UP(sizeof(struct slab), c->align);
 
@@ -141,7 +141,7 @@ static struct slab *slab_alloc_new(struct slab_cache *cache)
     INIT_LIST_HEAD(&s->link);
     s->in_use = 0;
 
-    void *first = (void *) ((uintptr_t) s + ALIGN_UP(sizeof(struct slab), cache->align));
+    u8 *first = (u8 *) ((uintptr_t) s + ALIGN_UP(sizeof(struct slab), cache->align));
     for (size_t i = 0; i < cache->obj_per_slab; i++) {
         u8 *slot = first + i * cache->obj_size;
         void *next = i + 1 < cache->obj_per_slab ? first + (i + 1) * cache->obj_size : NULL;
@@ -395,14 +395,14 @@ void kfree(void *ptr)
     }
 }
 
-size_t ksize(void *ptr)
+size_t ksize(const void *ptr)
 {
     if (!ptr) {
         return 0;
     }
     u64 *p = get_page(ptr);
     if (*p == LARGE_MAGIC) {
-        struct large_hdr *h = (struct large_hdr *) p;
+        const struct large_hdr *h = (struct large_hdr *) p;
         if (!is_large_page_start(ptr, h)) {
             panic("ksize: pointer is not the start of a large allocation");
         }

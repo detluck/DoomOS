@@ -1,5 +1,6 @@
 #include "lib/assert.h"
 #include "vga.h"
+#include "arch/io.h"
 
 void panic(const char *message)
 {
@@ -7,6 +8,11 @@ void panic(const char *message)
     vga_write("\n================ KERNEL PANIC ================\n");
     vga_write(message);
     vga_write("\nSystem halted.\n");
+
+#ifdef RUN_TESTS
+
+    outb(0xF4, 0x11); // exit code 35: a test failed
+#endif
 
     while (1) {
         __asm__ volatile("cli; hlt");

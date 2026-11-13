@@ -88,7 +88,7 @@ int vsnprintf(char *buf, size_t size, const char *fmt, va_list args)
             print_num(&o, is_long ? va_arg(args, u64) : va_arg(args, unsigned int), 2);
             break;
         case 'p': {
-            void *ptr = va_arg(args, void *);
+            const void *ptr = va_arg(args, void *);
             if (ptr == NULL) {
                 emit_str(&o, "(nil)");
             } else {
