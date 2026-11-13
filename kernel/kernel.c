@@ -78,7 +78,6 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
 
     /* QEMU CI smoke test: signal a successful boot via isa-debug-exit.
        QEMU exits with (0x10 << 1) | 1 = 33. Without the device this is a no-op. */
-    outl(0xF4, 0x10);
 
     vga_set_color(VGA_COLOR_BLUE, VGA_COLOR_GREEN);
 
