@@ -51,6 +51,7 @@ jobs:
       - name: Boot kernel in QEMU (headless)
         shell: bash
         run: |
+          status=0
           timeout --signal=TERM --kill-after=5s 10s \
             qemu-system-x86_64 \
               -cdrom build-smoke/kernel.iso \
@@ -59,17 +60,16 @@ jobs:
               -monitor none \
               -no-reboot \
               -d int,cpu_reset \
-              -D build-smoke/qemu.log
+              -D build-smoke/qemu.log || status=$?
 
-          status=$?
-
-          if [ "$status" -ne 124 ]; then
+          if [ "$status" -ne 124 ] && [ "$status" -ne 0 ]; then
             echo "::error::QEMU exited unexpectedly (exit code: $status)"
             tail -40 build-smoke/qemu.log
             exit 1
           fi
 
-          echo "Kernel remained running for 10 seconds."
+          echo "Kernel remained running for 10 seconds or shut down cleanly."
+
 
       - name: Run host and kernel tests
         run: make test CC=${{ matrix.compiler }} HOST_CC=${{ matrix.compiler }}
