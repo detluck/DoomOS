@@ -12,8 +12,10 @@
 void pmm_init(void);
 
 phys_addr_t pmm_alloc_frame(void);
+phys_addr_t pmm_alloc_frames(u64 count);
 
 void pmm_free_frame(phys_addr_t phys_addr);
+void pmm_free_frames(phys_addr_t start, u64 count);
 
 u64 pmm_get_total_frames(void);
 u64 pmm_get_free_frames(void);

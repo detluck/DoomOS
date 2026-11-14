@@ -220,7 +220,7 @@ void gdt_init(void)
     pr_ok("GDT initialized and verified.");
 }
 
-void gdt_load_tss(tss_t *state)
+void gdt_load_tss(const tss_t *state)
 {
     uintptr_t base = (uintptr_t) state;
     u32 limit = sizeof(*state) - 1;

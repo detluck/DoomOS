@@ -14,4 +14,4 @@ void gdt_init(void);
 /* Requires the active kernel GDT, IF=0 and a prepared 104-byte TSS.
  * Installs its descriptor and loads TR once; base must be in the early mapping.
  */
-void gdt_load_tss(tss_t *state);
+void gdt_load_tss(const tss_t *state);

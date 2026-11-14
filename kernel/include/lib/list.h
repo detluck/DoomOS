@@ -117,7 +117,7 @@ static inline void list_del(struct list_head *entry)
 }
 
 // checks if the list is empty(every empty list points to itself)
-static inline bool list_empty(struct list_head *list)
+static inline bool list_empty(const struct list_head *list)
 {
     return list->next == list;
 }

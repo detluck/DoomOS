@@ -196,6 +196,39 @@ phys_addr_t pmm_alloc_frame(void)
     return 0;
 }
 
+phys_addr_t pmm_alloc_frames(u64 count)
+{
+    if (count == 0)
+        return 0;
+    if (count == 1)
+        return pmm_alloc_frame();
+    if (count > total_free_frames)
+        return 0;
+
+    u64 run = 0;
+    for (pfn_t pfn = 0; pfn < total_frames; pfn++) {
+        // start over if already set
+        if (pfn % 64 == 0 && bitmap[pfn / 64] == ~0ULL) {
+            run = 0;
+            pfn += 63;
+            continue;
+        }
+        if (bitmap_test(pfn)) {
+            run = 0;
+            continue;
+        }
+        if (++run == count) {
+            pfn_t start = pfn - count + 1;
+            for (pfn_t p = start; p <= pfn; p++) {
+                bitmap_set(p);
+            }
+            total_free_frames -= count;
+            return PFN_TO_PHYS(start);
+        }
+    }
+    return 0;
+}
+
 void pmm_free_frame(phys_addr_t phys_addr)
 {
     if (phys_addr & (PAGE_SIZE - 1)) {
@@ -213,6 +246,18 @@ void pmm_free_frame(phys_addr_t phys_addr)
     }
     bitmap_clear(pfn);
     total_free_frames++;
+}
+
+void pmm_free_frames(phys_addr_t start, u64 count)
+{
+    if (!IS_ALIGNED(start, PAGE_SIZE)) {
+        pr_err("Trying to free unaligned frame run");
+        return;
+    }
+
+    for (u64 i = 0; i < count; i++) {
+        pmm_free_frame(start + i * PAGE_SIZE);
+    }
 }
 
 void pmm_test(void)
