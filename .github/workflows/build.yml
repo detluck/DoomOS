@@ -70,7 +70,6 @@ jobs:
 
           echo "Kernel remained running for 10 seconds or shut down cleanly."
 
-
       - name: Run host and kernel tests
         run: make test CC=${{ matrix.compiler }} HOST_CC=${{ matrix.compiler }}
 
@@ -81,3 +80,12 @@ jobs:
           name: x86-64-kernel-test-iso
           path: build-test/kernel.iso
           if-no-files-found: error
+
+      - name: Upload kernel test debug files
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-test-debug-${{ matrix.compiler }}
+          path: |
+            build-test/kernel.bin
+            build-test/qemu.log

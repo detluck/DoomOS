@@ -2,7 +2,7 @@ CC = gcc
 LD = ld
 AS = nasm
 # Compiler flags for freestanding 64-bit kernel
-CFLAGS = -m64 -ffreestanding -fno-stack-protector -mno-red-zone -mgeneral-regs-only -Wall -Wextra -nostdlib -O2 -mcmodel=kernel -fno-pie -fno-pic -Ikernel/include
+CFLAGS = -m64 -march=x86-64 -ffreestanding -fno-stack-protector -mno-red-zone -mgeneral-regs-only -Wall -Wextra -nostdlib -O2 -mcmodel=kernel -fno-pie -fno-pic -Ikernel/include
 ASFLAGS = -f elf64
 LDFLAGS = -n -T linker.ld --no-warn-rwx-segments -z max-page-size=0x1000
 
@@ -131,7 +131,9 @@ test-kernel:
 	status=$$?; \
 	if [ $$status -ne 33 ]; then \
 		printf '\033[0;31m[FAIL] Kernel tests failed (QEMU exit code %s, expected 33)\033[0m\n' "$$status"; \
-		tail -40 build-test/qemu.log; \
+		grep -m1 -A22 check_exception build-test/qemu.log; \
+		rip=$$(grep -m1 -oE 'IP=0008:[0-9a-f]+' build-test/qemu.log | cut -d: -f2); \
+		[ -n "$$rip" ] && addr2line -f -e build-test/kernel.bin 0x$$rip; \
 		exit 1; \
 	fi; \
 	printf '\033[0;32m[PASS] Kernel tests passed!\033[0m\n'
