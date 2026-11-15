@@ -2,6 +2,7 @@
 #include "vga.h"
 #include "gdt.h"
 #include "tss.h"
+#include "idt.h"
 #include "types.h"
 #include "arch/io.h"
 #include "mm/multiboot2.h"
@@ -39,6 +40,7 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
 
     gdt_init();
     tss_init();
+    idt_init();
 
     if (!multiboot_init(magic, mb2_info_adr)) {
         panic("Failed to initialize Multiboot2: cannot detect physical memory!");
@@ -49,6 +51,7 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
     pmm_test();
     vmm_init();
     vmm_test();
+    idt_check_active();
     kmalloc_init();
 
 // internal tests
