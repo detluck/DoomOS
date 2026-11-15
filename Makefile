@@ -7,6 +7,30 @@ ASFLAGS = -f elf64
 LDFLAGS = -n -T linker.ld --no-warn-rwx-segments -z max-page-size=0x1000
 
 BUILD_DIR = build
+
+# Deliberate CPU faults run in isolated, compiler-specific builds only.
+ARCH_TEST ?=
+ARCH_TEST_NAMES = smoke ud gp pf panic-reentry
+ARCH_TEST_DEFINE_smoke = ARCH_TEST_SMOKE
+ARCH_TEST_DEFINE_ud = ARCH_TEST_UD
+ARCH_TEST_DEFINE_gp = ARCH_TEST_GP
+ARCH_TEST_DEFINE_pf = ARCH_TEST_PF
+ARCH_TEST_DEFINE_panic-reentry = ARCH_TEST_PANIC_REENTRY
+
+ifneq ($(strip $(ARCH_TEST)),)
+ifneq ($(words $(ARCH_TEST)),1)
+$(error Select exactly one ARCH_TEST from: $(ARCH_TEST_NAMES))
+endif
+ifneq ($(filter $(ARCH_TEST_NAMES),$(strip $(ARCH_TEST))),$(strip $(ARCH_TEST)))
+$(error Unknown ARCH_TEST '$(ARCH_TEST)'; choose: $(ARCH_TEST_NAMES))
+endif
+ifeq ($(RUN_TESTS),1)
+$(error ARCH_TEST and RUN_TESTS=1 are separate boot modes)
+endif
+override BUILD_DIR := build/arch-tests/$(notdir $(firstword $(CC)))/$(strip $(ARCH_TEST))
+ARCH_TEST_FLAGS = -DARCH_SELFTEST -D$(ARCH_TEST_DEFINE_$(strip $(ARCH_TEST)))
+endif
+
 ISO_DIR = $(BUILD_DIR)/isodir
 
 # Recursively find files: $(call rwildcard,directory,pattern)
@@ -14,8 +38,12 @@ rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(
 
 # Source files
 BOOT_ASM_SRC = boot/header.asm boot/boot.asm
-ARCH_ASM_SRC = $(wildcard kernel/arch/*.asm)
-C_SRC = $(call rwildcard,kernel,*.c)
+ARCH_ASM_SRC = $(filter-out kernel/arch/selftest_asm.asm,$(wildcard kernel/arch/*.asm))
+C_SRC = $(filter-out kernel/arch/selftest.c,$(call rwildcard,kernel,*.c))
+ifneq ($(strip $(ARCH_TEST)),)
+ARCH_ASM_SRC += kernel/arch/selftest_asm.asm
+C_SRC += kernel/arch/selftest.c
+endif
 
 # Object files
 BOOT_ASM_OBJ = $(patsubst boot/%.asm, $(BUILD_DIR)/%.o, $(BOOT_ASM_SRC))
@@ -42,6 +70,7 @@ KERNEL_ISO = $(BUILD_DIR)/kernel.iso
 HOST_CC ?= gcc
 
 .PHONY: all run run-iso iso clean test host-test test-kernel run-tests debug-tests format format-check lint
+.PHONY: run-arch-test
 
 all: $(KERNEL_BIN)
 
@@ -58,7 +87,7 @@ $(BUILD_DIR)/asm/arch/%.o: kernel/arch/%.asm
 # Compile C files
 $(BUILD_DIR)/%.o: kernel/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(ARCH_TEST_FLAGS) -c $< -o $@
 
 # Link 64-bit ELF kernel binary
 $(KERNEL_BIN): $(ASM_OBJ) $(C_OBJ)
@@ -76,6 +105,15 @@ run: iso
 	qemu-system-x86_64 -cdrom $(KERNEL_ISO)
 
 run-iso: run
+
+# Example: make run-arch-test ARCH_TEST=pf CC=clang
+run-arch-test:
+ifeq ($(strip $(ARCH_TEST)),)
+	$(error run-arch-test requires ARCH_TEST: $(ARCH_TEST_NAMES))
+else
+	$(MAKE) iso ARCH_TEST=$(ARCH_TEST)
+	qemu-system-x86_64 -cdrom $(KERNEL_ISO) -no-reboot -no-shutdown
+endif
 
 # Host unit tests
 HOST_TEST_CFLAGS = -Wall -Wextra -fno-builtin -Ikernel/include \
