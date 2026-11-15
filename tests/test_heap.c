@@ -1,4 +1,5 @@
 #include "mm/heap.h"
+#include "mm/pmm.h"
 #include "lib/string.h"
 #include "lib/kprintf.h"
 #include "lib/assert.h"
@@ -214,6 +215,101 @@ void test_kmalloc_slab_exhaustion(void)
     kprintf("[PASS] kmalloc slab exhaustion\n");
 }
 
+static void fill_pattern(u8 *p, size_t n)
+{
+    for (size_t i = 0; i < n; i++) {
+        p[i] = (u8) (i * 7 + 1);
+    }
+}
+
+static bool check_pattern(const u8 *p, size_t n)
+{
+    for (size_t i = 0; i < n; i++) {
+        if (p[i] != (u8) (i * 7 + 1)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void test_krealloc_null_and_zero(void)
+{
+    // NULL pointer behaves like kmalloc
+    void *p = krealloc(NULL, 64);
+    assert(p != NULL);
+    assert(ksize(p) >= 64);
+
+    const u64 free_before = pmm_get_free_frames();
+    void *big = kmalloc(8192);
+    assert(big != NULL);
+    assert(pmm_get_free_frames() < free_before);
+    assert(krealloc(big, 0) == NULL);
+    assert(pmm_get_free_frames() == free_before);
+
+    kfree(p);
+    kprintf("[PASS] krealloc NULL pointer and size 0\n");
+}
+
+void test_krealloc_shrink_keeps_pointer(void)
+{
+    void *p = kmalloc(100); // class 128
+    assert(p != NULL);
+    assert(krealloc(p, 50) == p);
+    assert(krealloc(p, ksize(p)) == p); // growing up to the slot size costs nothing
+    kfree(p);
+
+    kprintf("[PASS] krealloc shrink keeps the same pointer\n");
+}
+
+void test_krealloc_grow_preserves_data(void)
+{
+    u8 *p = kmalloc(20);
+    assert(p != NULL);
+    fill_pattern(p, 20);
+
+    u8 *q = krealloc(p, 200); // slab to a bigger slab class
+    assert(q != NULL);
+    assert(ksize(q) >= 200);
+    assert(check_pattern(q, 20));
+    kfree(q);
+
+    kprintf("[PASS] krealloc grow preserves data\n");
+}
+
+void test_krealloc_slab_to_large(void)
+{
+    u8 *p = kmalloc(100);
+    assert(p != NULL);
+    fill_pattern(p, 100);
+
+    u8 *q = krealloc(p, 5000); // slab to large allocation
+    assert(q != NULL);
+    assert(ksize(q) >= 5000);
+    assert(check_pattern(q, 100));
+    kfree(q);
+
+    kprintf("[PASS] krealloc slab to large\n");
+}
+
+void test_krealloc_large_to_large(void)
+{
+    const u64 free_before = pmm_get_free_frames();
+
+    u8 *p = kmalloc(5000);
+    assert(p != NULL);
+    fill_pattern(p, 5000);
+
+    u8 *q = krealloc(p, 20000);
+    assert(q != NULL);
+    assert(ksize(q) >= 20000);
+    assert(check_pattern(q, 5000));
+    kfree(q);
+
+    assert(pmm_get_free_frames() == free_before); // no frames leaked
+
+    kprintf("[PASS] krealloc large to large, no frame leak\n");
+}
+
 void run_heap_tests()
 {
     kprintf("--- Running Heap Unit Tests ---\n");
@@ -236,6 +332,11 @@ void run_heap_tests()
     test_kfree_null();
     test_ksize_accuracy();
     test_kmalloc_slab_exhaustion();
+    test_krealloc_null_and_zero();
+    test_krealloc_shrink_keeps_pointer();
+    test_krealloc_grow_preserves_data();
+    test_krealloc_slab_to_large();
+    test_krealloc_large_to_large();
 
     kprintf("--- All Heap Unit Tests Passed! ---\n");
 }
