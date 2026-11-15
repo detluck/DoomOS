@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include "lib/list.h"
+#include <stddef.h>
 
 #define KMALLOC_MIN_SIZE 8
 #define KMALLOC_MAX_SIZE 2048
@@ -19,6 +20,9 @@ void *kmalloc(size_t size);
 
 // allocate zeroed kernel memory
 void *kzalloc(size_t size);
+
+// reallocate the object with new size
+void *krealloc(void *ptr, size_t new_size);
 
 // free kernel memory
 void kfree(void *ptr);

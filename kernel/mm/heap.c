@@ -414,6 +414,30 @@ size_t ksize(const void *ptr)
     panic("ksize: invalid pointer");
 }
 
+void *krealloc(void *ptr, size_t new_size)
+{
+    if (!ptr) {
+        return kmalloc(new_size);
+    }
+    if (new_size == 0) {
+        kfree(ptr);
+        return NULL;
+    }
+
+    size_t old_size = ksize(ptr);
+    if (new_size <= old_size) {
+        return ptr; // already big enough
+    }
+
+    void *p = kmalloc(new_size);
+    if (!p) {
+        return NULL;
+    }
+    memcpy(p, ptr, old_size);
+    kfree(ptr);
+    return p;
+}
+
 void kheap_dump_stats(void)
 {
     u64 total_active = 0;
