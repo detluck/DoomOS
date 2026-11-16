@@ -5,6 +5,7 @@
 #include "idt.h"
 #include "types.h"
 #include "arch/io.h"
+#include "arch/pic.h"
 #include "mm/multiboot2.h"
 #include "mm/pmm.h"
 #include "mm/heap.h"
@@ -58,6 +59,7 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
     vmm_init();
     vmm_test();
     idt_check_active();
+    pic_init();
 #ifdef ARCH_SELFTEST
     arch_selftest_run();
 #else

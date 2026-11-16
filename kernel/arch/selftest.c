@@ -1,6 +1,7 @@
 #include "arch/selftest.h"
 #include "arch/boot.h"
 #include "arch/cpu.h"
+#include "arch/pic.h"
 #include "idt.h"
 #include "lib/assert.h"
 #include "mm/vmm.h"
@@ -50,6 +51,80 @@ static void show_trigger(const char *name, const u8 *address)
 }
 #endif
 
+#if defined(ARCH_TEST_PIC)
+static void check_pic_mask(u16 expected)
+{
+    assert(!(read_rflags() & RFLAGS_INTERRUPT_ENABLE));
+    u16 actual = pic_get_mask();
+    if (actual != expected) {
+        panic_begin();
+        vga_write("ARCH_TEST pic FAIL: expected mask=0x");
+        vga_write_hex(expected);
+        vga_write(" actual=0x");
+        vga_write_hex(actual);
+        vga_write("\n");
+        panic_halt();
+    }
+}
+
+static void test_pic_masks(void)
+{
+    check_pic_mask(0xFFFF);
+    assert(pic_unmask_irq(1));
+    check_pic_mask(0xFFFD);
+    assert(pic_unmask_irq(1));
+    check_pic_mask(0xFFFD);
+    assert(pic_unmask_irq(0));
+    check_pic_mask(0xFFFC);
+    assert(pic_mask_irq(1));
+    check_pic_mask(0xFFFE);
+    assert(pic_mask_irq(0));
+    check_pic_mask(0xFFFF);
+    assert(pic_mask_irq(0));
+    check_pic_mask(0xFFFF);
+    assert(pic_unmask_irq(7));
+    check_pic_mask(0xFF7F);
+    assert(pic_mask_irq(7));
+    check_pic_mask(0xFFFF);
+
+    /* Slave changes must preserve other master and slave lines. */
+    assert(pic_unmask_irq(1));
+    check_pic_mask(0xFFFD);
+    assert(pic_unmask_irq(8));
+    check_pic_mask(0xFEF9);
+    assert(pic_unmask_irq(15));
+    check_pic_mask(0x7EF9);
+    assert(pic_mask_irq(8));
+    check_pic_mask(0x7FF9);
+    assert(pic_mask_irq(15));
+    check_pic_mask(0xFFFD);
+    assert(pic_mask_irq(1));
+    check_pic_mask(0xFFFF);
+
+    static const u8 invalid_irqs[] = {PIC_CASCADE_IRQ, PIC_IRQ_COUNT, 255};
+    for (size_t i = 0; i < sizeof(invalid_irqs) / sizeof(invalid_irqs[0]); i++) {
+        assert(!pic_mask_irq(invalid_irqs[i]));
+        check_pic_mask(0xFFFF);
+        assert(!pic_unmask_irq(invalid_irqs[i]));
+        check_pic_mask(0xFFFF);
+    }
+
+    assert(pic_unmask_irq(8));
+    check_pic_mask(0xFEFB);
+    assert(!pic_mask_irq(PIC_CASCADE_IRQ));
+    check_pic_mask(0xFEFB);
+    assert(!pic_unmask_irq(PIC_CASCADE_IRQ));
+    check_pic_mask(0xFEFB);
+    /* Master changes must preserve an open slave cascade. */
+    assert(pic_unmask_irq(0));
+    check_pic_mask(0xFEFA);
+    assert(pic_mask_irq(0));
+    check_pic_mask(0xFEFB);
+    assert(pic_mask_irq(8));
+    check_pic_mask(0xFFFF);
+}
+#endif
+
 /* Assembly falls through here if an expected fatal instruction did not fault. */
 void arch_test_unexpected_return(void) __noreturn;
 void arch_test_unexpected_return(void)
@@ -62,6 +137,11 @@ void arch_selftest_run(void)
     assert(!(read_rflags() & RFLAGS_INTERRUPT_ENABLE));
 #if defined(ARCH_TEST_SMOKE)
     vga_write("ARCH_TEST smoke PASS\n");
+    cpu_halt_forever();
+#elif defined(ARCH_TEST_PIC)
+    test_pic_masks();
+    assert(!(read_rflags() & RFLAGS_INTERRUPT_ENABLE));
+    vga_write("ARCH_TEST pic PASS\n");
     cpu_halt_forever();
 #elif defined(ARCH_TEST_UD)
     show_trigger("ud", arch_test_ud_fault);
