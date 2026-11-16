@@ -5,15 +5,21 @@
 #include "idt.h"
 #include "types.h"
 #include "arch/io.h"
+#include "arch/pic.h"
 #include "mm/multiboot2.h"
 #include "mm/pmm.h"
 #include "mm/heap.h"
 #include "lib/assert.h"
 #include "lib/kprintf.h"
 
+#ifdef ARCH_SELFTEST
+#include "arch/selftest.h"
+#endif
+
 extern void run_heap_tests(void);
 extern void run_pmm_tests(void);
 
+#ifndef ARCH_SELFTEST
 static u8 ps2_read(void)
 {
     while (!(inb(0x64) & 0x01))
@@ -29,6 +35,7 @@ static void print_scancode_set(void)
     ps2_read(); // ACK
     kprintf("scancode set reply: 0x%x\n", ps2_read());
 }
+#endif
 
 void kernel_main(u64 magic, u64 mb2_info_adr)
 {
@@ -52,6 +59,10 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
     vmm_init();
     vmm_test();
     idt_check_active();
+    pic_init();
+#ifdef ARCH_SELFTEST
+    arch_selftest_run();
+#else
     kmalloc_init();
 
 // internal tests
@@ -106,4 +117,5 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
     while (1) {
         __asm__ volatile("hlt");
     }
+#endif
 }

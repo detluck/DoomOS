@@ -1,9 +1,11 @@
 #include "idt.h"
 #include "arch/boot.h"
 #include "arch/cpu.h"
+#include "arch/exceptions.h"
 #include "defs.h"
 #include "gdt.h"
 #include "lib/assert.h"
+#include "tss.h"
 #include "types.h"
 
 #define LOG_SCOPE "IDT"
@@ -11,6 +13,7 @@
 
 #define IDT_ENTRY_COUNT 256
 #define IDT_GATE_ATTRIBUTES 0x8E
+#define IDT_GATE_PRESENT (1U << 7)
 
 typedef struct {
     u16 offset_low;
@@ -88,6 +91,11 @@ static void idt_check_region(uintptr_t base, size_t size)
     }
 }
 
+static u8 idt_gate_ist(size_t vector)
+{
+    return vector == EXCEPTION_DOUBLE_FAULT ? TSS_IST_DOUBLE_FAULT : 0;
+}
+
 static void idt_check_gates(void)
 {
     const volatile idt_entry_t *entries = idt;
@@ -95,7 +103,7 @@ static void idt_check_gates(void)
         u64 target = entries[i].offset_low | ((u64) entries[i].offset_middle << 16) |
                      ((u64) entries[i].offset_high << 32);
         if (target != isr_stub_table[i] || entries[i].selector != GDT_KERNEL_CODE_SELECTOR ||
-            entries[i].ist != 0 || entries[i].attributes != IDT_GATE_ATTRIBUTES ||
+            entries[i].ist != idt_gate_ist(i) || entries[i].attributes != IDT_GATE_ATTRIBUTES ||
             entries[i].reserved != 0) {
             panic("IDT: invalid interrupt gate");
         }
@@ -146,7 +154,7 @@ void idt_init(void)
         idt[i] = (idt_entry_t) {
             .offset_low = (u16) target,
             .selector = GDT_KERNEL_CODE_SELECTOR,
-            .ist = 0,
+            .ist = idt_gate_ist(i),
             .attributes = IDT_GATE_ATTRIBUTES,
             .offset_middle = (u16) (target >> 16),
             .offset_high = (u32) (target >> 32),
@@ -159,3 +167,12 @@ void idt_init(void)
     idt_check_active();
     pr_ok("IDT initialized and verified.");
 }
+
+#ifdef ARCH_TEST_DF
+void idt_test_disable_gp_gate(void)
+{
+    idt_check_active();
+    volatile idt_entry_t *entry = &idt[EXCEPTION_GENERAL_PROTECTION];
+    entry->attributes &= (u8) ~IDT_GATE_PRESENT;
+}
+#endif

@@ -7,6 +7,33 @@ ASFLAGS = -f elf64
 LDFLAGS = -n -T linker.ld --no-warn-rwx-segments -z max-page-size=0x1000
 
 BUILD_DIR = build
+
+# Architecture self-tests run in isolated, compiler-specific builds only.
+ARCH_TEST ?=
+ARCH_TEST_NAMES = smoke ud gp pf df df-stack panic-reentry pic
+ARCH_TEST_DEFINE_smoke = ARCH_TEST_SMOKE
+ARCH_TEST_DEFINE_ud = ARCH_TEST_UD
+ARCH_TEST_DEFINE_gp = ARCH_TEST_GP
+ARCH_TEST_DEFINE_pf = ARCH_TEST_PF
+ARCH_TEST_DEFINE_df = ARCH_TEST_DF
+ARCH_TEST_DEFINE_df-stack = ARCH_TEST_DF_STACK
+ARCH_TEST_DEFINE_panic-reentry = ARCH_TEST_PANIC_REENTRY
+ARCH_TEST_DEFINE_pic = ARCH_TEST_PIC
+
+ifneq ($(strip $(ARCH_TEST)),)
+ifneq ($(words $(ARCH_TEST)),1)
+$(error Select exactly one ARCH_TEST from: $(ARCH_TEST_NAMES))
+endif
+ifneq ($(filter $(ARCH_TEST_NAMES),$(strip $(ARCH_TEST))),$(strip $(ARCH_TEST)))
+$(error Unknown ARCH_TEST '$(ARCH_TEST)'; choose: $(ARCH_TEST_NAMES))
+endif
+ifeq ($(RUN_TESTS),1)
+$(error ARCH_TEST and RUN_TESTS=1 are separate boot modes)
+endif
+override BUILD_DIR := build/arch-tests/$(notdir $(firstword $(CC)))/$(strip $(ARCH_TEST))
+ARCH_TEST_FLAGS = -DARCH_SELFTEST -D$(ARCH_TEST_DEFINE_$(strip $(ARCH_TEST)))
+endif
+
 ISO_DIR = $(BUILD_DIR)/isodir
 
 # Recursively find files: $(call rwildcard,directory,pattern)
@@ -14,8 +41,12 @@ rwildcard = $(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(
 
 # Source files
 BOOT_ASM_SRC = boot/header.asm boot/boot.asm
-ARCH_ASM_SRC = $(wildcard kernel/arch/*.asm)
-C_SRC = $(call rwildcard,kernel,*.c)
+ARCH_ASM_SRC = $(filter-out kernel/arch/selftest_asm.asm,$(wildcard kernel/arch/*.asm))
+C_SRC = $(filter-out kernel/arch/selftest.c,$(call rwildcard,kernel,*.c))
+ifneq ($(strip $(ARCH_TEST)),)
+ARCH_ASM_SRC += kernel/arch/selftest_asm.asm
+C_SRC += kernel/arch/selftest.c
+endif
 
 # Object files
 BOOT_ASM_OBJ = $(patsubst boot/%.asm, $(BUILD_DIR)/%.o, $(BOOT_ASM_SRC))
@@ -28,7 +59,7 @@ KERNEL_TEST_SRC = tests/test_pmm.c tests/test_heap.c
 KERNEL_TEST_OBJ = $(patsubst tests/%.c, $(BUILD_DIR)/tests/%.o, $(KERNEL_TEST_SRC))
 
 # Host unit tests
-HOST_TESTS = string list vsnprintf
+HOST_TESTS = string list vsnprintf irq
 HOST_TEST_BIN = $(addprefix $(BUILD_DIR)/host_test_, $(HOST_TESTS))
 
 ifeq ($(RUN_TESTS),1)
@@ -42,6 +73,7 @@ KERNEL_ISO = $(BUILD_DIR)/kernel.iso
 HOST_CC ?= gcc
 
 .PHONY: all run run-iso iso clean test host-test test-kernel run-tests debug-tests format format-check lint
+.PHONY: run-arch-test
 
 all: $(KERNEL_BIN)
 
@@ -58,7 +90,7 @@ $(BUILD_DIR)/asm/arch/%.o: kernel/arch/%.asm
 # Compile C files
 $(BUILD_DIR)/%.o: kernel/%.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(ARCH_TEST_FLAGS) -c $< -o $@
 
 # Link 64-bit ELF kernel binary
 $(KERNEL_BIN): $(ASM_OBJ) $(C_OBJ)
@@ -76,6 +108,15 @@ run: iso
 	qemu-system-x86_64 -cdrom $(KERNEL_ISO)
 
 run-iso: run
+
+# Example: make run-arch-test ARCH_TEST=pf CC=clang
+run-arch-test:
+ifeq ($(strip $(ARCH_TEST)),)
+	$(error run-arch-test requires ARCH_TEST: $(ARCH_TEST_NAMES))
+else
+	$(MAKE) iso ARCH_TEST=$(ARCH_TEST)
+	qemu-system-x86_64 -cdrom $(KERNEL_ISO) -no-reboot -no-shutdown
+endif
 
 # Host unit tests
 HOST_TEST_CFLAGS = -Wall -Wextra -fno-builtin -Ikernel/include \
@@ -99,6 +140,15 @@ $(BUILD_DIR)/host_test_list: tests/test_list.c
 $(BUILD_DIR)/host_test_vsnprintf: tests/test_vsnprintf.c kernel/lib/vsnprintf.c
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(HOST_TEST_CFLAGS) $^ -o $@
+
+# IRQ tests: real dispatch/PIC code with test-local CPU and port I/O replacements
+$(BUILD_DIR)/host_test_irq: tests/test_irq.c kernel/arch/irq.c kernel/arch/pic.c \
+                          kernel/arch/interrupts.c \
+                          $(wildcard tests/support/irq/arch/*.h kernel/include/arch/*.h) \
+                          kernel/include/types.h kernel/include/defs.h kernel/include/vga.h \
+                          kernel/include/lib/assert.h kernel/include/lib/log.h
+	@mkdir -p $(dir $@)
+	$(HOST_CC) -Itests/support/irq $(HOST_TEST_CFLAGS) $(filter %.c,$^) -o $@
 
 # Compile kernel integration tests
 $(BUILD_DIR)/tests/%.o: tests/%.c
@@ -161,6 +211,7 @@ format-check:
 # Static analysis
 lint:
 	cppcheck --enable=all \
+	         --force \
 	         --inconclusive \
 	         --check-level=exhaustive \
 	         --std=c11 \

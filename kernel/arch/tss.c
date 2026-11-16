@@ -60,7 +60,7 @@ void tss_init(void)
     tss_check_storage();
     memset(&tss, 0, sizeof(tss));
     tss.rsp0 = (uintptr_t) (rsp0_stack + sizeof(rsp0_stack));
-    tss.ist[0] = (uintptr_t) (ist1_stack + sizeof(ist1_stack));
+    tss.ist[TSS_IST_DOUBLE_FAULT - 1] = (uintptr_t) (ist1_stack + sizeof(ist1_stack));
     tss.iomap_base = sizeof(tss);
     gdt_load_tss(&tss);
     if (read_rflags() & RFLAGS_INTERRUPT_ENABLE) {
@@ -68,4 +68,16 @@ void tss_init(void)
     }
     initialized = true;
     pr_ok("TSS initialized and verified.");
+}
+
+bool tss_double_fault_stack_contains(uintptr_t address, size_t size)
+{
+    uintptr_t stack_start = (uintptr_t) ist1_stack;
+    uintptr_t stack_end = (uintptr_t) (ist1_stack + sizeof(ist1_stack));
+    const volatile tss_t *state = &tss;
+    if (!initialized || state->ist[TSS_IST_DOUBLE_FAULT - 1] != stack_end || size == 0 ||
+        address < stack_start || address >= stack_end) {
+        return false;
+    }
+    return size <= stack_end - address;
 }

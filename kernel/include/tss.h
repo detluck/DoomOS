@@ -3,6 +3,8 @@
 #include "defs.h"
 #include "types.h"
 
+#define TSS_IST_DOUBLE_FAULT 1
+
 typedef struct {
     u32 reserved0;
     u64 rsp0;
@@ -29,3 +31,6 @@ _Static_assert(offsetof(tss_t, iomap_base) == 102, "TSS I/O map base must start 
  * Does not switch away from the boot stack or install an interrupt gate.
  */
 void tss_init(void);
+
+/* Checks a nonempty range against the initialized IST1 stack without dereferencing it. */
+bool tss_double_fault_stack_contains(uintptr_t address, size_t size);

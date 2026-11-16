@@ -12,6 +12,12 @@
 
 void panic(const char *message) __noreturn;
 
+/* Single-CPU fatal diagnostics: begin disables IRQs and guards all output.
+ * A repeated entry halts without touching the console again.
+ */
+void panic_begin(void);
+void panic_halt(void) __noreturn;
+
 #define assert(condition) \
     do { \
         if (!(condition)) { \
