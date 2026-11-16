@@ -10,11 +10,13 @@ BUILD_DIR = build
 
 # Deliberate CPU faults run in isolated, compiler-specific builds only.
 ARCH_TEST ?=
-ARCH_TEST_NAMES = smoke ud gp pf panic-reentry
+ARCH_TEST_NAMES = smoke ud gp pf df df-stack panic-reentry
 ARCH_TEST_DEFINE_smoke = ARCH_TEST_SMOKE
 ARCH_TEST_DEFINE_ud = ARCH_TEST_UD
 ARCH_TEST_DEFINE_gp = ARCH_TEST_GP
 ARCH_TEST_DEFINE_pf = ARCH_TEST_PF
+ARCH_TEST_DEFINE_df = ARCH_TEST_DF
+ARCH_TEST_DEFINE_df-stack = ARCH_TEST_DF_STACK
 ARCH_TEST_DEFINE_panic-reentry = ARCH_TEST_PANIC_REENTRY
 
 ifneq ($(strip $(ARCH_TEST)),)
@@ -199,6 +201,7 @@ format-check:
 # Static analysis
 lint:
 	cppcheck --enable=all \
+	         --force \
 	         --inconclusive \
 	         --check-level=exhaustive \
 	         --std=c11 \

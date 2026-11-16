@@ -4,10 +4,11 @@ default rel
 extern arch_test_unexpected_return
 global arch_test_ud, arch_test_gp, arch_test_pf
 global arch_test_ud_fault, arch_test_gp_fault, arch_test_pf_fault
+global arch_test_df_stack, arch_test_df_stack_fault
 
 section .text
 
-; Fatal test entries never return. RDI retains the trigger argument; RSP stays valid.
+; UD/GP/PF entries never return. RDI retains the trigger argument; RSP stays valid.
 ; Known GPR values make the saved context visible without an ISR return test.
 %macro prepare_registers 0
     mov rax, 0x1111111111111111
@@ -44,6 +45,15 @@ arch_test_pf:
     prepare_registers
 arch_test_pf_fault:
     mov rax, [rdi]
+    jmp arch_test_unexpected_return
+
+; Unlike UD/GP/PF, this test abandons the normal stack to fault during #PF delivery.
+arch_test_df_stack:
+    mov rbx, rsp
+    mov rsp, rdi
+arch_test_df_stack_fault:
+    push rax
+    mov rsp, rbx                ; unexpected success: restore a valid C-entry stack
     jmp arch_test_unexpected_return
 
 section .note.GNU-stack noalloc noexec nowrite progbits

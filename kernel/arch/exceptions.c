@@ -1,8 +1,9 @@
 #include "arch/exceptions.h"
+#include "arch/cpu.h"
 #include "lib/assert.h"
+#include "tss.h"
 #include "vga.h"
 
-#define EXCEPTION_GENERAL_PROTECTION 13
 #define PAGE_FAULT_PRESENT (1ULL << 0)
 #define PAGE_FAULT_WRITE (1ULL << 1)
 #define PAGE_FAULT_USER (1ULL << 2)
@@ -111,14 +112,35 @@ static void dump_general_protection(u64 error_code)
     vga_write("\n");
 }
 
-void exception_panic(const interrupt_context_t *context, u64 fault_address)
+static void dump_double_fault(const interrupt_context_t *context, uintptr_t entry_rsp,
+                              u64 handler_flags)
 {
+    write_pair("Handler entry RSP", entry_rsp, "Context", (uintptr_t) context);
+    if (!tss_double_fault_stack_contains(entry_rsp, sizeof(u64)) ||
+        !tss_double_fault_stack_contains((uintptr_t) context, sizeof(*context))) {
+        vga_write("DF: handler entry or context outside IST1. System halted.\n");
+        panic_halt();
+    }
+    if (context->error_code != 0 || (handler_flags & RFLAGS_INTERRUPT_ENABLE)) {
+        vga_write("DF: invalid error code or handler IF. System halted.\n");
+        panic_halt();
+    }
+    vga_write("DF: IST1 entry and context verified, IF=0\n");
+    vga_write("DF: saved RIP is undefined; not a reliable fault location\n");
+}
+
+void exception_panic(const interrupt_context_t *context, u64 fault_address, uintptr_t entry_rsp)
+{
+    /* Observe IF before the shared panic entry disables interrupts. */
+    u64 handler_flags = read_rflags();
     panic_begin();
     vga_write("Exception: ");
     vga_write(context->vector < EXCEPTION_COUNT ? exception_names[context->vector] : "Unknown");
     vga_write("\n");
     dump_context(context);
-    if (context->vector == EXCEPTION_PAGE_FAULT) {
+    if (context->vector == EXCEPTION_DOUBLE_FAULT) {
+        dump_double_fault(context, entry_rsp, handler_flags);
+    } else if (context->vector == EXCEPTION_PAGE_FAULT) {
         dump_page_fault(context->error_code, fault_address);
     } else if (context->vector == EXCEPTION_GENERAL_PROTECTION) {
         dump_general_protection(context->error_code);

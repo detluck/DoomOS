@@ -14,7 +14,7 @@ void interrupt_dispatch(const interrupt_context_t *context, uintptr_t entry_rsp)
         panic("ISR: invalid C entry stack");
     }
     if (context->vector < EXCEPTION_COUNT) {
-        exception_panic(context, fault_address);
+        exception_panic(context, fault_address, entry_rsp);
     }
     panic_begin();
     vga_write("Unhandled interrupt: vector=0x");
