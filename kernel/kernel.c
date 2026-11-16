@@ -63,7 +63,7 @@ void kernel_main(u64 magic, u64 mb2_info_adr)
 #ifdef ARCH_SELFTEST
     arch_selftest_run();
 #else
-    kmalloc_init();
+    kmalloc_init();https://github.com/detluck/DoomOS/pull/18/conflict?name=kernel%252Fkernel.c&ancestor_oid=59b53dd11ecf0cd797db87e9dcd9458f5f5f8195&base_oid=3f48a01dd2953e81f37819e0afdbbc83311e113e&head_oid=4b86f555206e7e80b579c4c4007790f8d4d12dbe
 
 // internal tests
 #ifdef RUN_TESTS
