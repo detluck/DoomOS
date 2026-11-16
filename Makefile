@@ -59,7 +59,7 @@ KERNEL_TEST_SRC = tests/test_pmm.c tests/test_heap.c
 KERNEL_TEST_OBJ = $(patsubst tests/%.c, $(BUILD_DIR)/tests/%.o, $(KERNEL_TEST_SRC))
 
 # Host unit tests
-HOST_TESTS = string list vsnprintf
+HOST_TESTS = string list vsnprintf irq
 HOST_TEST_BIN = $(addprefix $(BUILD_DIR)/host_test_, $(HOST_TESTS))
 
 ifeq ($(RUN_TESTS),1)
@@ -140,6 +140,15 @@ $(BUILD_DIR)/host_test_list: tests/test_list.c
 $(BUILD_DIR)/host_test_vsnprintf: tests/test_vsnprintf.c kernel/lib/vsnprintf.c
 	@mkdir -p $(dir $@)
 	$(HOST_CC) $(HOST_TEST_CFLAGS) $^ -o $@
+
+# IRQ tests: real dispatch/PIC code with test-local CPU and port I/O replacements
+$(BUILD_DIR)/host_test_irq: tests/test_irq.c kernel/arch/irq.c kernel/arch/pic.c \
+                          kernel/arch/interrupts.c \
+                          $(wildcard tests/support/irq/arch/*.h kernel/include/arch/*.h) \
+                          kernel/include/types.h kernel/include/defs.h kernel/include/vga.h \
+                          kernel/include/lib/assert.h kernel/include/lib/log.h
+	@mkdir -p $(dir $@)
+	$(HOST_CC) -Itests/support/irq $(HOST_TEST_CFLAGS) $(filter %.c,$^) -o $@
 
 # Compile kernel integration tests
 $(BUILD_DIR)/tests/%.o: tests/%.c

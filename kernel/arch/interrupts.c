@@ -1,6 +1,7 @@
 #include "arch/interrupt_context.h"
 #include "arch/cpu.h"
 #include "arch/exceptions.h"
+#include "arch/irq.h"
 #include "defs.h"
 #include "lib/assert.h"
 #include "vga.h"
@@ -15,6 +16,9 @@ void interrupt_dispatch(const interrupt_context_t *context, uintptr_t entry_rsp)
     }
     if (context->vector < EXCEPTION_COUNT) {
         exception_panic(context, fault_address, entry_rsp);
+    }
+    if (irq_dispatch(context)) {
+        return;
     }
     panic_begin();
     vga_write("Unhandled interrupt: vector=0x");

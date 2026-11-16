@@ -16,6 +16,10 @@
 #define PIC_ICW1_INIT 0x10
 #define PIC_ICW1_ICW4 0x01
 #define PIC_ICW4_8086 0x01
+#define PIC_OCW3_READ_ISR 0x0B
+#define PIC_OCW2_EOI 0x20
+#define PIC_LAST_INPUT 7
+#define PIC_LAST_INPUT_MASK (1U << PIC_LAST_INPUT)
 
 static bool initialized;
 
@@ -113,4 +117,38 @@ u16 pic_get_mask(void)
     u8 master_mask = inb(PIC_MASTER_DATA);
     u8 slave_mask = inb(PIC_SLAVE_DATA);
     return master_mask | ((u16) slave_mask << PIC_INPUT_COUNT);
+}
+
+static void pic_check_device_irq(u8 irq)
+{
+    pic_check_ready();
+    if (irq >= PIC_IRQ_COUNT || irq == PIC_CASCADE_IRQ) {
+        panic("PIC: invalid device IRQ");
+    }
+}
+
+bool pic_begin_irq(u8 irq)
+{
+    pic_check_device_irq(irq);
+    if (irq == PIC_LAST_INPUT || irq == PIC_IRQ_COUNT - 1) {
+        bool slave = irq >= PIC_INPUT_COUNT;
+        u16 port = slave ? PIC_SLAVE_COMMAND : PIC_MASTER_COMMAND;
+        pic_write(port, PIC_OCW3_READ_ISR);
+        if (!(inb(port) & PIC_LAST_INPUT_MASK)) {
+            if (slave) {
+                pic_write(PIC_MASTER_COMMAND, PIC_OCW2_EOI);
+            }
+            return false;
+        }
+    }
+    return true;
+}
+
+void pic_end_irq(u8 irq)
+{
+    pic_check_device_irq(irq);
+    if (irq >= PIC_INPUT_COUNT) {
+        pic_write(PIC_SLAVE_COMMAND, PIC_OCW2_EOI);
+    }
+    pic_write(PIC_MASTER_COMMAND, PIC_OCW2_EOI);
 }

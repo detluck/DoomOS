@@ -18,3 +18,10 @@ bool pic_unmask_irq(u8 irq);
 
 /* Actual IMRs: master in bits 0-7, slave in bits 8-15; set means masked. */
 u16 pic_get_mask(void);
+
+/* Architecture dispatch only; device IRQ 0-15 except IRQ2, initialized PIC, IF=0.
+ * Begin returns false after fully handling a spurious IRQ (including cascade EOI).
+ * After true, service the device and call end exactly once. No end after false.
+ */
+bool pic_begin_irq(u8 irq);
+void pic_end_irq(u8 irq);
